@@ -26,7 +26,7 @@ jobs:
           $installer = Join-Path $env:RUNNER_TEMP "vulkansdk-windows-X64-$version.exe"
           if (-not (Test-Path $root)) {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$version/windows/vulkansdk-windows-X64-$version.exe" -OutFile $installer
-            & $installer install --accept-licenses --default-answer --confirm-command --accept-messages "--root=$root"
+            & $installer --accept-licenses --confirm-command --accept-messages "--root=$root" install
             if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK $version installer exited $LASTEXITCODE" }
           }
           $compiler = Join-Path $root 'Bin\glslangValidator.exe'
