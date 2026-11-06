@@ -57,9 +57,9 @@ for (;;) {
   if (gs.gif_busy(1)) { /* the guest would wait for the GS FIFO */ }
 
   // LOCAL→HOST transfer the game started with a TRXDIR write:
-  std::uint32_t words[8];
-  const std::size_t got = gs.read_transfer_fifo(words, 8);
-  // got < 8: the transfer ended; zero-fill the rest.
+  std::uint32_t words[8];                        // 32 bytes, two GIF qwords
+  const std::size_t got = gs.read_transfer_fifo(words, sizeof words);
+  // The buffer is zero-filled beyond `got`; `got` counts real bytes (a multiple of 16).
 
   gs.flush();                                   // VBlank: commit the frame
   gs.set_display_field(odd_field);              // CSR.FIELD of this VBlank
@@ -111,8 +111,9 @@ A game's `LOCAL→HOST` transfer (`TRXDIR = 1`) is answered synchronously:
 1. The renderer flushes the pending batch, so every earlier draw is recorded.
 2. It reads the source rectangle back from any render target that holds newer pixels than GS memory
    (a GPU reduction followed by a copy), or from GS memory directly when nothing was drawn there.
-3. `read_transfer_fifo(destination, qwords)` copies the words out. The call returns the number of
-   whole qwords of real data; once the transfer is drained it returns 0 and the caller zero-fills.
+3. `read_transfer_fifo(destination, byte_count)` copies the bytes out (a multiple of 16) and
+   zero-fills the rest of the buffer. It returns the number of real bytes; once the transfer is
+   drained it returns 0.
 
 The readback is exact and may block the GS thread until the GPU finishes the work that feeds it.
 That is the price of fidelity for a game that inspects its own rendering (light flare visibility,

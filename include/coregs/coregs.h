@@ -195,9 +195,10 @@ public:
   void reset_context();
   void clear_vram();
 
-  // Copies LOCAL->HOST data of the pending transfer. Returns the bytes copied; the caller zero-fills
-  // the rest. The contract is in docs/INTEGRATION.md (readbacks).
-  std::size_t read_transfer_fifo(void *destination, std::size_t qwords);
+  // Copies up to `byte_count` bytes of the pending LOCAL->HOST transfer (a multiple of 16, one GIF
+  // qword) and zero-fills the rest of the buffer. Returns the number of real bytes copied, at most
+  // `byte_count`. The contract is in docs/INTEGRATION.md (readbacks).
+  std::size_t read_transfer_fifo(void *destination, std::size_t byte_count);
 
   // CPU view of GS memory coherent with the recorded work (4 MiB). Valid until the next call that
   // changes GS memory; nullptr when the current mode keeps no CPU copy.

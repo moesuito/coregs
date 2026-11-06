@@ -96,8 +96,8 @@ gs.next_frame();
 gs.present(coregs::PresentPhase::progressive);  // one present per guest VBlank
 
 // 4. Readbacks: the game's LOCAL->HOST transfers come out of read_transfer_fifo().
-std::uint32_t words[2];
-gs.read_transfer_fifo(words, 2);
+std::uint32_t words[8];                       // 32 bytes, two GIF qwords
+const std::size_t got = gs.read_transfer_fifo(words, sizeof words);  // bytes of real data
 
 // 5. Shut down: let the GPU finish, then detach the window.
 gs.wait_idle();

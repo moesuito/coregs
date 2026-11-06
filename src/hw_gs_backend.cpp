@@ -1894,11 +1894,13 @@ void Renderer::clear_vram() {
   if (impl_->renderer) impl_->renderer->ClearVram();
 }
 
-std::size_t Renderer::read_transfer_fifo(void *destination, std::size_t qwords) {
-  // LOCAL->HOST data of the most recent TRXDIR = 1 transfer (chapter 10.2); zeros beyond it.
-  const std::size_t bytes = impl_->renderer ? impl_->renderer->ReadFifo(destination, qwords * 16) : 0;
-  std::memset(static_cast<std::uint8_t *>(destination) + bytes, 0, qwords * 16 - bytes);
-  return qwords;
+std::size_t Renderer::read_transfer_fifo(void *destination, std::size_t byte_count) {
+  // LOCAL->HOST data of the most recent TRXDIR = 1 transfer (chapter 10.2); zeros beyond it. A GIF
+  // qword is 16 bytes, so the caller asks for whole qwords.
+  const std::size_t bytes = impl_->renderer ? impl_->renderer->ReadFifo(destination, byte_count) : 0;
+  const std::size_t copied = bytes < byte_count ? bytes : byte_count;
+  if (copied < byte_count) std::memset(static_cast<std::uint8_t *>(destination) + copied, 0, byte_count - copied);
+  return copied;
 }
 
 const std::uint8_t *Renderer::map_vram(std::uint32_t offset, std::uint32_t size) {
