@@ -12,7 +12,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Vulkan SDK
-        run: choco install vulkan-sdk -y --no-progress
+        shell: pwsh
+        env:
+          # The SDK the glslang pin was taken from. The version in the download URL is the version pin;
+          # the shader-compiler step below checks the installed tool against the SHA-256 pin.
+          VULKAN_SDK_VERSION: 1.4.341.1
+        run: |
+          # Chocolatey installs whatever SDK its package currently carries and sets VULKAN_SDK at machine
+          # scope, which the runner's already-started process never sees. Download the pinned installer
+          # instead, install it under its own version directory and export VULKAN_SDK for the later steps.
+          $version = $env:VULKAN_SDK_VERSION
+          $root = "C:\VulkanSDK\$version"
+          $installer = Join-Path $env:RUNNER_TEMP "vulkansdk-windows-X64-$version.exe"
+          if (-not (Test-Path $root)) {
+            Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$version/windows/vulkansdk-windows-X64-$version.exe" -OutFile $installer
+            & $installer install --accept-licenses --default-answer --confirm-command --accept-messages "--root=$root"
+            if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK $version installer exited $LASTEXITCODE" }
+          }
+          $compiler = Join-Path $root 'Bin\glslangValidator.exe'
+          if (-not (Test-Path $compiler)) { throw "Vulkan SDK $version installed without $compiler" }
+          "VULKAN_SDK=$root" >> $env:GITHUB_ENV
 
       - name: Toolchain
         uses: ilammy/msvc-dev-cmd@v1
@@ -21,17 +40,23 @@ jobs:
 
       - name: Shader compiler
         shell: pwsh
+        env:
+          GLSLANG_SHA256: db832826d73049193882d5572ad76e14fcb7b1cdfc1a6b892ac25217b850b6bc
         run: |
           $compiler = Join-Path $env:VULKAN_SDK 'Bin\glslangValidator.exe'
+          if (-not (Test-Path $compiler)) { throw "glslangValidator not found at $compiler" }
           & $compiler --version
-          Get-FileHash $compiler -Algorithm SHA256 | Format-List
+          $actual = (Get-FileHash $compiler -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "glslangValidator SHA-256: $actual"
+          if ($actual -ne $env:GLSLANG_SHA256.ToLowerInvariant()) {
+            throw "glslangValidator hash $actual does not match the pin $env:GLSLANG_SHA256"
+          }
 
       - name: Configure
         shell: pwsh
         run: >
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER=clang-cl
-          -DCOREGS_GLSLANG_PIN=OFF
 
       - name: Build
         run: cmake --build build
