@@ -117,8 +117,16 @@ struct Vulkan {
         app.apiVersion = VK_API_VERSION_1_2;
         VkInstanceCreateInfo instance_info{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
         instance_info.pApplicationInfo = &app;
-        if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS) {
-            error = "vkCreateInstance failed (is vulkan-1.dll available?)";
+        const VkResult instance_result = vkCreateInstance(&instance_info, nullptr, &instance);
+        if (instance_result != VK_SUCCESS) {
+            // A machine with no Vulkan driver installed fails here, before any device can be enumerated (a CI
+            // runner without a GPU, for example). That is the same "no device" the fixtures skip on, and the
+            // reason is printed; every other result stays an error.
+            if (instance_result == VK_ERROR_INCOMPATIBLE_DRIVER) {
+                error = "no Vulkan driver installed (vkCreateInstance returned VK_ERROR_INCOMPATIBLE_DRIVER)";
+                return kSkipCode;
+            }
+            error = "vkCreateInstance failed: VkResult " + std::to_string(static_cast<int>(instance_result));
             return 2;
         }
 
