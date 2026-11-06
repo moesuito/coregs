@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Presentation resampling of the composed frame to the window rectangle (TASK-027 CORE2 C2/C3, IN-432).
 // Copyright (c) 2026 GT4Recomp contributors.

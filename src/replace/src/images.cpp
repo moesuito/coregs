@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapter 11.4 (image formats).
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 // PNG decoding uses the vendored stb_image v2.30 (public domain or MIT) with the PNG decoder only.
 #include "hw_gs_replace/images.hpp"
 

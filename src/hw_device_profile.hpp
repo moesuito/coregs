@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // TASK-179 (Android plan stage A1): the capability probe of CoreGS 2.0. Written from the Vulkan specification, clean room
 // (decision 0070).
 //

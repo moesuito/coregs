@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // CTest hw_queue_lock: TASK-174, one queue shared by the GS thread and the presentation thread, host only (no Vulkan).
 //
 // 1. QueueLock keeps every call on a fake queue to one thread at a time (Vulkan external synchronization), with several threads

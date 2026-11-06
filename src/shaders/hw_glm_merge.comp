@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // GLM word merge (TASK-027 M7/M10, chapters 04.9 and 05.6, IN-350). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 04.9, 05.6 and 10, clean room (decision 0070).

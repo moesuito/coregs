@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR CPU reference renderer: the front end feeds batches to the rasterizer, transfers land
 // in the shadow local memory, and the display path composes the frame image from the

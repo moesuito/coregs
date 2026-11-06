@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Reference GS local memory transcribed from TASK-026 specification chapter 01.3 (block
 // arrangement, pixel position inside a block, address computation). Test fixture only.
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #include "reference_gs_memory.hpp"
 
 namespace hw_gs_replace::testing {

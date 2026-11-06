@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors
 //
 // Fake GPU and plain SLM reference for the HWR surface cache tests (TASK-027,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR CPU reference rasterizer: points, lines, triangles and sprites drawn into the shadow
 // local memory with the specification's coverage rules, attribute interpolation, texture

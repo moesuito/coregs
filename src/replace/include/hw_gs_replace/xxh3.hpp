@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // XXH3-64 with seed 0 (chapter 11.2 / 11.3): one-shot and streaming. Streaming equals one-shot
 // over the concatenated bytes (chapter 11.3). Written from the TASK-026 specification.
-// Copyright (c) 2026 GT4Recomp contributors, MIT. Hash implementation: xxHash 0.8.3 (BSD-2).
+// Copyright (c) 2026 GT4Recomp contributors. Hash implementation: xxHash 0.8.3 (BSD-2).
 #pragma once
 
 #include <cstddef>

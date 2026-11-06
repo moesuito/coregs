@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec): chapters 02, 01.7, 10.2, 13.1 to 13.3.
 #include "cpuref_renderer.hpp"

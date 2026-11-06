@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapter 11 (TASK-027), clean room (decision 0070).
 #include "core2_replace.hpp"
 

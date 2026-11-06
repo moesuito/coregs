@@ -1,7 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
+//
 // HWR CPU reference fixtures (TASK-027): coverage vectors, flat shading, sprites, CLUT
 // lookups, blend sweeps through the full draw path, IN-07, depth, and synthetic capture replay.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from docs/hw-renderer-spec (clean room, decision 0069).
 //
 // Usage: cpuref_tests <test-name>   (names are listed in CMakeLists.txt)

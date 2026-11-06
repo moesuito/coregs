@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR mipmapping and level-of-detail selection: CPU reference (TASK-027, M13).
 // Copyright (c) 2026 GT4Recomp contributors.

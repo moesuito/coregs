@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 //
 // CTest present_rect: the presentation rectangle (16:9, display-aspect fill and the box-halving rule of an
 // upscaled frame) against known vectors and its own invariants. Pure arithmetic, no device.

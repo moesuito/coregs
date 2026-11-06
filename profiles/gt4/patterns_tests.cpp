@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // CTest gt4_patterns: the profile's tone-pattern classifier.
 
 #include "patterns.h"

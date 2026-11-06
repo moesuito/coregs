@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR GIF parser: PACKED, REGLIST and IMAGE packets on paths 1, 2 and 3
 // (chapter 02.1). Input is whole 128-bit qwords; packets may be split at any
 // qword boundary across calls.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 #pragma once
 

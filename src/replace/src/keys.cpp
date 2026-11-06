@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapters 11.2, 11.3.1 to
 // 11.3.4 and 04.6 (upload-size inference). Clean room (decision 0069).
-// Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Copyright (c) 2026 GT4Recomp contributors.
 #include "hw_gs_replace/keys.hpp"
 
 #include <algorithm>

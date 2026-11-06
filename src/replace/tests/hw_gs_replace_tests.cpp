@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
 // CTest fixtures for the HWR texture replacement core (TASK-027, M16 and M18 pure part).
 // Vectors come from TASK-026 specification chapters 01, 04.3, 07.5 and 11. Synthetic cases use
 // the reference memory of this directory.
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #include <algorithm>
 #include <array>
 #include <chrono>

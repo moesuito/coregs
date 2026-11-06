@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // HWR texture replacement file names: Format G and Format P formatting and parsing
 // (chapters 11.2 and 11.3.5). Written from the TASK-026 specification (docs/hw-renderer-spec).
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstdint>

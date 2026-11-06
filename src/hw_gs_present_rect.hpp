@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), clean room per decision 0069.
 // Implements chapter 13.6 (fixed 16:9 presentation rectangle) and the TASK-080 display-aspect fill of the race view.
 // Pure arithmetic, no Vulkan.

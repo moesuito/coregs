@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // HWR texture replacement pack discovery: folder scans, archive entries and the first-wins index
 // (chapters 11.2, 11.3.5 and 11.5). Written from the TASK-026 specification (docs/hw-renderer-spec).
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstddef>

@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapter 11.4 test fixture (clean room, decision 0069).
 // Minimal PNG writer for CTest fixtures: stored (uncompressed) deflate blocks, 8-bit channels.
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstdint>

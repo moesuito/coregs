@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // GLM target load (TASK-027 M7/M10, chapters 04.9 step 3 and 05.3, IN-350). Copyright (c) 2026 GT4Recomp
 // contributors. Written from docs/hw-renderer-spec chapters 04.9, 05.3 and 10, clean room (decision 0070).

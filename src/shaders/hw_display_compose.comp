@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Display compose on the GPU (TASK-027 M6/M17, chapter 13.3, IN-364). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 13.2 and 13.3, clean room (decision 0070).

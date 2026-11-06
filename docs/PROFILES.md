@@ -65,7 +65,7 @@ changed later.
 
 ## The Gran Turismo 4 profile
 
-`profiles/gt4/` is the reference example, MIT and part of this repository. GT4 is the game CoreGS
+`profiles/gt4/` is the reference example, Apache-2.0 and part of this repository. GT4 is the game CoreGS
 was developed and validated against, so its profile is also the documented answer to "what does a
 real profile look like?".
 

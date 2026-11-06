@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR per-draw decisions: trace, overlap, blend, DATE, alpha test, barriers and the draw
 // plan (TASK-027). Written from docs/hw-renderer-spec, chapters 02.9, 02.10, 03, 08 (clean

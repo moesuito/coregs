@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapters 11.2, 11.3.
-// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #include "hw_gs_replace/xxh3.hpp"
 
 #include <stdexcept>

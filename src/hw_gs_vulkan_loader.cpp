@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from the Vulkan specification. See hw_gs_vulkan_loader.hpp for why the names are renamed.
 
 #include "hw_gs_vulkan_loader.hpp"

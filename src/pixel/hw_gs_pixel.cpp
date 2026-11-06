@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR pixel arithmetic: CPU reference for the GS per-pixel pipeline.
 // Copyright (c) 2026 GT4Recomp contributors.

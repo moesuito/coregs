@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Bit-exactness fixture for the HWR GPU pixel path (TASK-027, M4). Copyright (c) 2026 GT4Recomp contributors.
 //

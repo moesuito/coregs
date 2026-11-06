@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapters 02, 10.2, 14.3,
-// and our MIT GS stream protocol (docs/GS-STREAM-PROTOCOL.md sections 2, 4, 6, 10).
+// and our Apache-2.0 GS stream protocol (docs/GS-STREAM-PROTOCOL.md sections 2, 4, 6, 10).
 #include "cpuref_replay.hpp"
 
 #include "../../gs_stream/gs_stream_protocol.h"

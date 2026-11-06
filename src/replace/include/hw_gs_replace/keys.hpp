@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // CoreGS texture replacement keys: Format G (CoreGS's own, chapter 11.2) and Format P
 // (compatible with the common texture-pack layout, chapter 11.3). Written from the CoreGS specification
-// (docs/hw-renderer-spec). Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// (docs/hw-renderer-spec). Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstdint>

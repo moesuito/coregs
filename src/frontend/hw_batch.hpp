@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR batch model and batch analysis: vertex trace, ST rounding, overlap and
 // draw lists (chapter 02.4, 02.9, 02.10).
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 #pragma once
 

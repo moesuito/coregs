@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from docs/hw-renderer-spec (TASK-027 M4, chapters 03 and 15), clean room (decision 0069).
 //
 // Vulkan-free interface of the HWR reference GPU drawer (write-back mode). One Execute() call draws

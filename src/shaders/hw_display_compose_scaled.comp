@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Display compose at the internal scale (TASK-027 M12, chapters 06 and 13.3, IN-372). Copyright (c) 2026 GT4Recomp
 // contributors. Written from docs/hw-renderer-spec chapters 06.8, 13.2 and 13.3, clean room (decision 0070).

@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // TASK-135: the performance HUD's panel, premultiplied pixels drawn on the CPU (hud/hw_hud.cpp).
 #version 450
 

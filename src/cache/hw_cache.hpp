@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors
 //
 // HWR texture and render-target cache bookkeeping (TASK-027, milestone M7).

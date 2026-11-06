@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // HWR texture replacement: CLUT buffer and direct-texel expansion (chapters 01.6, 07.5, 11.3.3).
 // Written from the TASK-026 specification (docs/hw-renderer-spec). Clean room (decision 0069).
-// Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <array>

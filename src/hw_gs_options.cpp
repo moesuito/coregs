@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), clean room per decision 0069.
 // Implements chapter 12.2 (COREGS_RENDERER) and chapter 12.8 (COREGS_HW_* table).
 

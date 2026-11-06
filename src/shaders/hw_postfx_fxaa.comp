@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Edge-only fast approximate anti-aliasing of the presentation frame (TASK-027 M12/M15, chapter 13.5, IN-376).
 // Copyright (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec chapter 13.5, clean room

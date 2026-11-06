@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Deinterlace of the scaled presentation frame (TASK-027 M12, chapter 13.4 at an internal scale, IN-381). Copyright
 // (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec chapters 13.3 and 13.4, clean room (decision

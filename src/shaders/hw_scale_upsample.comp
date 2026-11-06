@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Scaled target refresh (TASK-027 M12, chapter 06.8, IN-371). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 06.2 and 06.8, clean room (decision 0070).

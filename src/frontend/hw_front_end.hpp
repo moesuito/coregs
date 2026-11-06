@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR GS front end: GIF stream to register state, vertex kicks, batches with
 // snapshots and the flush rules, auto-flush, transfers, VBlank and CLUT loads
 // (chapter 02, with chapter 07.3 for loads).
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 #pragma once
 

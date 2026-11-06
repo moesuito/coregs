@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR per-draw decisions (TASK-027): the pure, GPU-free part of the draw translator.
 // Copyright (c) 2026 GT4Recomp contributors.

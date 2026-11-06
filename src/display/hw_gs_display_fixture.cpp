@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // CTest fixtures for the HWR display output reference (hw_gs_display.hpp).
 // Copyright (c) 2026 GT4Recomp contributors.

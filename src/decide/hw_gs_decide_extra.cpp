@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR per-draw decisions, second part: texture and channel shuffles (chapter 09), the game
 // brightness patterns (09.4), clears (05.8), page rows and the pipeline key (03.9).

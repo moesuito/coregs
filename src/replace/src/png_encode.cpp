@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapter 11 test fixture (clean room, decision 0069).
 // Minimal PNG writer for CTest fixtures. Clean room (decision 0069).
-// Copyright (c) 2026 GT4Recomp contributors, MIT.
+// Copyright (c) 2026 GT4Recomp contributors.
 #include "png_encode.hpp"
 
 #include <algorithm>

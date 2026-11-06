@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 //
 // CoreGS: a generic, hardware-faithful PlayStation 2 Graphics Synthesizer renderer on Vulkan.
 //

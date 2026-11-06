@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // Written from docs/hw-renderer-spec (TASK-027 M4, chapters 00 reference mode, 03, 12.3, 12.9, 15),
 // clean room (decision 0069).
 //

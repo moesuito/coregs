@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // HWR texture replacement: GS value types shared by the key, name and CLUT code.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapters 01, 04.3,
-// 07.5 and 11 (clean room, decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// 07.5 and 11 (clean room, decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstddef>

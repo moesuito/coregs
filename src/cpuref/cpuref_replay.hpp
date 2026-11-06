@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR CPU reference replay: parses legacy COREGS_PGS_CAPTURE and native GSSTREAM v2 streams
 // and feeds them to the CPU reference renderer, one display image per frame end.
@@ -59,7 +59,7 @@ bool ReplayCapture(const std::vector<uint8_t>& stream, CpuRenderer& renderer, Re
                    const std::function<void(uint64_t frame, const FrameImage& image)>& onFrame,
                    std::string& error);
 
-// Native GSSTREAM v2 envelopes, from our MIT protocol (GS-STREAM-PROTOCOL sections 2, 6, 10).
+// Native GSSTREAM v2 envelopes, from our Apache-2.0 protocol (GS-STREAM-PROTOCOL sections 2, 6, 10).
 bool ReplayCaptureV2(const std::vector<uint8_t>& stream, CpuRenderer& renderer, ReplaySummary& summary,
                      const std::function<void(uint64_t frame, const FrameImage& image)>& onFrame,
                      std::string& error);

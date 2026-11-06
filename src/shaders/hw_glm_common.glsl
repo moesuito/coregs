@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // GS local memory addressing on the GPU (TASK-027 M10 GLM, IN-347). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 01.3 and 04.9, clean room (decision 0070).

@@ -1,4 +1,4 @@
-# The Gran Turismo 4 profile: the reference example of a game profile (MIT, our own code).
+# The Gran Turismo 4 profile: the reference example of a game profile (Apache-2.0, our own code).
 add_library(coregs_profile_gt4 STATIC gt4_profile.cpp patterns.cpp)
 target_link_libraries(coregs_profile_gt4 PUBLIC coregs_core)
 target_include_directories(coregs_profile_gt4 PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

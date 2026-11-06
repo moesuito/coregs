@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 Joao Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 Joao Alano and GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), clean room (decision 0069).
 //
 // Present scheduler (M6 interface): a finished image and a decision about when to show it. Chapter 12.5

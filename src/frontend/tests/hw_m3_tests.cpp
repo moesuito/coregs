@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR M3 fixtures: GIF split invariance, flush rules, auto-flush, vertex trace,
 // ST rounding, CLUT loads and snapshots, transfer commits and counters.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 //
 // Usage: hw_gs_m3_tests <test-name>   (names are listed in CMakeLists.txt)

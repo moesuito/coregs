@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 //
 // Presentation mode selection for the CoreGS front end: FIFO (vsync), mailbox or immediate.
 // A host sets it through COREGS_PRESENT_MODE; the surface decides which modes it accepts.

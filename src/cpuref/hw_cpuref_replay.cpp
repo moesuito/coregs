@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 //
 // coregs_cpu_replay: replays a legacy or GSSTREAM v2 capture through the CPU reference renderer and writes
 // one frame_NNNNN.ppm per frame that has a display image.
@@ -8,7 +9,6 @@
 // --slm-hashes writes "<frame> <16 hex digits>" per frame: the FNV-1a hash of the 4 MiB local memory.
 // Default vram is the 1x reference image; scanout is the composed presentation image.
 // frames.jsonl records every capture-native frame; image filenames are never renumbered.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 #include <cstdio>
 #include <filesystem>
 #include <fstream>

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // Embedded SPIR-V of the HWR shaders (TASK-027, M4). The arrays are generated at build time by
 // src/shaders/CMakeLists.txt from the GLSL sources, compiled by the pinned glslang

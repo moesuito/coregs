@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 //
 // GT4 brightness and fade patterns: classifies a run of channel-shuffle batches into the two shapes
 // GT4 uses (an RGB tone curve across three channels, or an alpha stash into several targets).

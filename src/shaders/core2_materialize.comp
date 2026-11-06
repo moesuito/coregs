@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // CORE2 target to GLM (TASK-027 core rewrite, IN-408). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 01.3, 04.9 and CORE2-SPEC 4.2, clean room (decision 0070).

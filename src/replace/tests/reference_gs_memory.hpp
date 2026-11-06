@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Reference GS local memory for CTest fixtures: a 4 MiB byte array with the chapter 01.3 block
 // and pixel layout transcribed from the TASK-026 specification. It stands in for the M2 swizzle
-// library in these tests only. Clean room (decision 0069). Copyright (c) 2026 GT4Recomp, MIT.
+// library in these tests only. Clean room (decision 0069). Copyright (c) 2026 GT4Recomp.
 #pragma once
 
 #include <cstdint>

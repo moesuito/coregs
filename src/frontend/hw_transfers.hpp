@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR transfer bookkeeping (chapter 02.7) and the sink interface the memory
 // model (M2, written in parallel) implements.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 #pragma once
 

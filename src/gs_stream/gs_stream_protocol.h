@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // GS stream protocol, version 1.3.
 //
 // A generic stream of PlayStation 2 GS hardware traffic between a producer process (the game, which runs the EE

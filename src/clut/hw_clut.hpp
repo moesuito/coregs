@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // HWR CLUT unit: 1 KiB palette buffer, CLD load rules, CSM1/CSM2 layouts,
 // palette decode and TEXA expansion (chapters 01.5, 01.6, 07.1 to 07.5).
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 //
 // The pixel location functions here cover the three CLUT source formats only

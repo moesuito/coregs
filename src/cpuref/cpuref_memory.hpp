@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR CPU reference: local memory sink. Implements the front end's TransferSink on top of the
 // M2 shadow local memory (memory::LocalMemory), so transfers land in the same SLM the

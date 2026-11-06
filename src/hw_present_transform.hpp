@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 // TASK-179 (Android plan stage A1): the swapchain pre-transform and where the picture goes for it. Written from the Vulkan
 // specification (VkSwapchainCreateInfoKHR::preTransform, VkSurfaceTransformFlagBitsKHR, vkCmdBlitImage), clean room
 // (decision 0070). Pure arithmetic, no Vulkan: the transform bits are the VkSurfaceTransformFlagBitsKHR values.

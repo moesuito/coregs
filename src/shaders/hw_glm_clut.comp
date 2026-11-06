@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // GPU CLUT load from the GLM (TASK-027 chapter 07.7, IN-349). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 07.1 to 07.7, clean room (decision 0070).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // CORE2 constant fill (TASK-027 IN-442). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec (chapters 08 and 12.6), clean room (decision 0070).

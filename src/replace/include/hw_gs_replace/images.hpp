@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // HWR texture replacement image decoders: PNG (8-bit RGB and RGBA) and DDS (BC1/2/3/7 and the
 // listed uncompressed layouts), chapter 11.4. Written from the TASK-026 specification
-// (docs/hw-renderer-spec). Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
+// (docs/hw-renderer-spec). Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors.
 #pragma once
 
 #include <cstdint>

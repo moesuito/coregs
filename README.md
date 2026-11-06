@@ -1,6 +1,6 @@
 # CoreGS
 
-**A generic PlayStation 2 Graphics Synthesizer renderer for port authors — Vulkan, MIT, clean-room.**
+**A generic PlayStation 2 Graphics Synthesizer renderer for port authors — Vulkan, Apache-2.0, clean-room.**
 
 CoreGS renders the PS2 GS the way the hardware does it: it parses the GIF stream, tracks the
 privileged registers, keeps GS local memory coherent, decodes textures and palettes, and draws
@@ -24,7 +24,8 @@ stable interface:
   the display path follow the GS rules; a profile can trade an effect for speed, but never silently.
 - **Made for static recompilation and emulator-style hosts.** Feed GIF packets and register writes
   from the GS thread; present from the same or another thread.
-- **MIT.** Link it into a commercial or open-source port.
+- **Apache-2.0.** Link it into a commercial or open-source port; the licence asks only that you
+  keep the notice and credit the project.
 
 ## Features at a glance
 
@@ -164,12 +165,19 @@ tools/              the replay tool
 
 ## Licence and credits
 
-MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-CoreGS was written for [GT4Recomp](https://github.com/moesuito/gt4-staticrecomp) (MIT), the static
+CoreGS was written for [GT4Recomp](https://github.com/moesuito/gt4-staticrecomp), the static
 recompilation of Gran Turismo 4, from that project's own clean-room specification of the PS2 GS.
 Thank you to the GT4Recomp contributors and to the PS2 homebrew and preservation community whose
 public documentation of the GS made the clean-room work possible.
 
+The licence requires the notice to travel with the code: if you distribute a product built with
+CoreGS, reproduce [NOTICE](NOTICE) in your documentation or materials. You are also asked to credit
+CoreGS visibly — in your product's About screen, credits or documentation — together with
+[GT4Recomp](https://github.com/moesuito/gt4-staticrecomp), where users can see it.
+
 Third-party: [stb_image](https://github.com/nothings/stb) (MIT/public domain) and
-[xxHash](https://github.com/Cyan4973/xxHash) (BSD-2-Clause), used by texture replacement.
+[xxHash](https://github.com/Cyan4973/xxHash) (BSD-2-Clause), used by texture replacement; the
+presentation resampling shader follows AMD FidelityFX Super Resolution 1.0 (MIT). Their notices are
+reproduced in [NOTICE](NOTICE).

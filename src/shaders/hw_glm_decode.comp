@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // GLM texture decode (TASK-027 M10, chapter 04.9 step 3, IN-347). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 04.9 and 07, clean room (decision 0070).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec (clean room, decision 0069): chapters 01.4, 01.5, 02.9,
 // 03.3 to 03.5 and 08. See IMPLEMENTATION-NOTES.md, entries IN-300 to IN-312.

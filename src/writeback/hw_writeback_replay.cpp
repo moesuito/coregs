@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 Joao Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 Joao Alano and GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), clean room (decision 0069).
 //
 // HWR replay tool (M6): replays a recorded GS stream through the GPU write-back renderer and writes one

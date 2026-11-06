@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 GT4Recomp contributors.
 // Written from the TASK-026 specification (docs/hw-renderer-spec), chapters 12.9 and 14.2-14.4.
 // Oracle decode: MIT ps2-web-recomp runtime/src/gs/gs.cpp::display and gpu/gs.wgsl::display

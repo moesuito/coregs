@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 #pragma once
 // TASK-174: one VkQueue used by two threads. On a device whose graphics family has a single queue (RADV on the Steam Deck), the
 // presentation runs on its own thread but on the rendering queue, so the GS thread never waits for the display. Vulkan requires

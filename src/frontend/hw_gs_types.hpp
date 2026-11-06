@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 GT4Recomp contributors.
 // CoreGS shared types and bit helpers.
-// Copyright 2026 GT4Recomp contributors. Licensed under the MIT License (see LICENSE).
 // Written from the TASK-026 specification (docs/hw-renderer-spec) (clean room).
 //
 // Vocabulary follows the specification (chapters 01 and 02). "Qword" means a

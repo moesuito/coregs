@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // CORE2 patch from the GLM (TASK-027 core rewrite, CORE2-SPEC 4.1). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec/CORE2-SPEC.md and chapter 04.9, clean room (decision 0070).

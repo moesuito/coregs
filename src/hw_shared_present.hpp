@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 #pragma once
 // TASK-174: the GS thread's rule before it draws a picture for the presentation thread (hw_gs_backend.cpp: present_on_shared_queue on
 // a device with one queue in its graphics family, and present_paced on the second queue while frames are left out). The GS thread

@@ -95,5 +95,6 @@ start.
 
 ## Licence
 
-By contributing you agree that your contribution is licensed under the MIT licence of this
-repository (see `LICENSE`). Do not contribute code you cannot license that way.
+By contributing you agree that your contribution is licensed under the Apache License 2.0 of this
+repository (see `LICENSE`), and that your contribution may be distributed under it together with
+the `NOTICE` attribution terms. Do not contribute code you cannot license that way.

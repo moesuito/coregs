@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // EE->GS upload into the GLM (TASK-027 M7/M10, chapters 01.4, 02.7 and 04.9, IN-351). Copyright (c) 2026
 // GT4Recomp contributors. Written from docs/hw-renderer-spec chapters 01.4, 02.7, 04.9 and 10, clean room

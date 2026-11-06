@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0
 //
 // HWR display output: CPU reference for the PCRTC output stage (TASK-027, M6 and M15).
 // Copyright (c) 2026 GT4Recomp contributors.

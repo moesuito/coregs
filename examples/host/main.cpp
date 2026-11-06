@@ -1,4 +1,5 @@
-// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 João Alano and GT4Recomp contributors.
 //
 // CoreGS example host: the smallest program that opens a window, feeds a synthetic GS stream and
 // presents the picture. It is the worked example of docs/INTEGRATION.md.
