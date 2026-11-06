@@ -11,6 +11,7 @@
 #include "../writeback/hw_gs_vulkan_device_table.hpp"
 #include "../hw_queue_lock.hpp"
 #include "../shaders/hw_shader_blobs.hpp"
+#include "../platform/hw_platform.hpp"
 #include "../memory/hw_memory.hpp"
 
 #ifdef _WIN32
@@ -1190,8 +1191,9 @@ struct Gpu::Impl {
   };
 
   void open_shader_cache() {
-    // Read as Windows holds it: in the narrow form an accented folder (C:\\Users\\Jo\u00e3o) is in the ANSI code page, not UTF-8.
-    const wchar_t *folder = _wgetenv(L"COREGS_HW_SHADER_CACHE");
+    // Read in the platform's own path form: UTF-16 on Windows, so an accented folder (C:\\Users\\Jo\u00e3o) is not
+    // read through the ANSI code page; bytes on Linux, as the platform stores them.
+    const auto *folder = platform::GetPathEnvironment("COREGS_HW_SHADER_CACHE");
     if (!folder || !*folder) return;
     std::error_code ignored;
     shaderCacheFolder = std::filesystem::path(folder);

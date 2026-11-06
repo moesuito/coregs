@@ -10,7 +10,6 @@
 #include <map>
 #include <bit>
 #include <chrono>
-#include <intrin.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -35,6 +34,7 @@
 #include "hw_gs_types.hpp"
 #include "hw_gs_lod.hpp"
 #include "hw_memory.hpp"
+#include "platform/hw_platform.hpp"
 #include "hw_gs_replace/clut.hpp"
 #include "hw_gs_replace/gs_types.hpp"
 #include "hw_gs_replace/keys.hpp"
@@ -396,11 +396,11 @@ struct PhaseClock {
 double MicrosecondsPerTick() {
     static const double value = [] {
         const auto start = std::chrono::steady_clock::now();
-        const std::uint64_t startTicks = __rdtsc();
+        const std::uint64_t startTicks = platform::ReadCycleCounter();
         while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(2)) {
         }
         const double us = std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count();
-        return us / static_cast<double>(__rdtsc() - startTicks);
+        return us / static_cast<double>(platform::ReadCycleCounter() - startTicks);
     }();
     return value;
 }
@@ -417,7 +417,7 @@ public:
     ScopedUs(PhaseClock &clock, double PhaseTimes::*field)
         : clock_(clock), field_(field), parent_(clock.open), start_(0), stopped_(!PhaseTimingOn()) {
         if (stopped_) return;
-        start_ = __rdtsc();
+        start_ = platform::ReadCycleCounter();
         clock.open = this;
     }
     ~ScopedUs() { Stop(); }
@@ -425,7 +425,7 @@ public:
     void Stop() {
         if (stopped_) return;
         stopped_ = true;
-        const double us = static_cast<double>(__rdtsc() - start_) * MicrosecondsPerTick();
+        const double us = static_cast<double>(platform::ReadCycleCounter() - start_) * MicrosecondsPerTick();
         clock_.inclusive.*field_ += us;
         clock_.exclusive.*field_ += us - children_;
         if (parent_) parent_->children_ += us;
@@ -3739,8 +3739,9 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     bool replacementTrace_ = false;
 
     void StartTextureReplacement() {
-        // Read as Windows holds them: in the narrow form an accented folder is in the ANSI code page, not UTF-8.
-        const wchar_t *root = _wgetenv(L"COREGS_HW_TEXTURES");
+        // Read in the platform's own path form: UTF-16 on Windows, so an accented folder is not read through the
+        // ANSI code page; bytes on Linux, as the platform stores them.
+        const auto *root = platform::GetPathEnvironment("COREGS_HW_TEXTURES");
         const char *dump = std::getenv("COREGS_HW_DUMP_TEXTURES");
         textureDumps_ = dump != nullptr && std::strcmp(dump, "0") != 0;
         replacementSync_ = std::getenv("COREGS_HW_TEXTURES_SYNC") != nullptr;
@@ -3760,7 +3761,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
             stats.replacementFiles = report.filesRegistered;
         }
         if (textureDumps_) {
-            const wchar_t *dumpDir = _wgetenv(L"COREGS_HW_TEXTURE_DUMP_DIR");
+            const auto *dumpDir = platform::GetPathEnvironment("COREGS_HW_TEXTURE_DUMP_DIR");
             textureDumpDir_ = dumpDir != nullptr ? std::filesystem::path(dumpDir)
                                                  : (folder.empty() ? std::filesystem::path("TextureDumps")
                                                                    : folder.parent_path() / "TextureDumps");
