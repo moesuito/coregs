@@ -154,9 +154,10 @@ tools/              the replay tool
 ## Building details
 
 - **Shaders** are compiled at build time by `glslangValidator`. Set `COREGS_GLSLANG` (default:
-  `$VULKAN_SDK/Bin/glslangValidator`) and keep the pinned SHA-256, or set `COREGS_GLSLANG_PIN=OFF`
-  deliberately on a machine whose package differs (the Linux CI job does this and records the version;
-  the Windows job installs the pinned Vulkan SDK and checks the tool against the pin).
+  `$VULKAN_SDK/Bin/glslangValidator.exe` on Windows, `$VULKAN_SDK/bin/glslangValidator` elsewhere) and
+  keep the pinned SHA-256, or set `COREGS_GLSLANG_PIN=OFF` deliberately on a machine whose package differs
+  (the Linux CI job does this and records the version; the Windows job installs the pinned Vulkan SDK and
+  checks the tool against the pin).
 - **Vulkan** headers and loader come from the SDK on Windows (`COREGS_VULKAN_SDK`, default
   `$VULKAN_SDK`) and from `find_package(Vulkan)` elsewhere.
 - **Options** are fields of `coregs::Options`; the same fields exist as `COREGS_HW_*`

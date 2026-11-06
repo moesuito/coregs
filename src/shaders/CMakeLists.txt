@@ -8,7 +8,14 @@
 # COREGS_GLSLANG_PIN=OFF exists for CI images whose distro package differs; the build then
 # records the compiler version it used and says so.
 
-set(COREGS_GLSLANG "$ENV{VULKAN_SDK}/Bin/glslangValidator"
+# The SDK keeps the tool under Bin/ on Windows and bin/ on Linux, and Windows needs the .exe suffix
+# for the existence check to succeed when the SDK's Bin directory is not on PATH.
+if(WIN32)
+    set(COREGS_GLSLANG_DEFAULT "$ENV{VULKAN_SDK}/Bin/glslangValidator.exe")
+else()
+    set(COREGS_GLSLANG_DEFAULT "$ENV{VULKAN_SDK}/bin/glslangValidator")
+endif()
+set(COREGS_GLSLANG "${COREGS_GLSLANG_DEFAULT}"
     CACHE FILEPATH "glslangValidator used to build the CoreGS shaders")
 if(NOT EXISTS "${COREGS_GLSLANG}")
     find_program(COREGS_GLSLANG_FOUND NAMES glslangValidator glslang)
