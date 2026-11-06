@@ -5,7 +5,7 @@
 // The GPU side of CORE2. Every target is one r32ui storage image of GS words at the internal scale (colour and depth
 // alike); nothing is kept at 1x. Draws use the existing vertex and uber pixel shaders (blending, depth, alpha test,
 // DATE, dither and fog in the shader on storage images). Compute passes patch native rectangles from GS memory into
-// a target (4.1), reduce a target to 1x words for a readback (4.2), run GT4's channel-shuffle hook (7.2) and merge the
+// a target (4.1), reduce a target to 1x words for a readback (4.2), run the game's channel-shuffle hook (7.2) and merge the
 // display (5.3). Work is recorded into one command buffer and submitted at the end of a frame, or earlier when the CPU
 // needs a result. The public header stays Vulkan-free.
 #pragma once
@@ -265,7 +265,7 @@ public:
     bool ReduceLater(ImageId id, std::int32_t x0, std::int32_t y0, std::int32_t x1, std::int32_t y1,
                      std::uint32_t &ticket, std::string &error);
     bool TakeReduced(std::uint32_t ticket, std::vector<std::uint32_t> &words, std::string &error);
-    // 7.2: GT4's channel-shuffle hook over the image's native rectangle [0, width) x [0, height).
+    // 7.2: the game's channel-shuffle hook over the image's native rectangle [0, width) x [0, height).
     bool Tone(ImageId id, std::uint32_t nativeWidth, std::uint32_t nativeHeight, const std::uint32_t palette[256],
               std::string &error);
 

@@ -5,7 +5,7 @@
 //
 // The inverse of hw_glm_swizzle.comp: one invocation per pixel of a rectangle of a resident target; the
 // target pixel receives the stored word of its own (BP, BW, PSM) layout read from the GLM (the value
-// LocalMemory::readPixel would return on the same bytes). A target whose memory another view last drew (GT4
+// LocalMemory::readPixel would return on the same bytes). A target whose memory another view last drew (the game
 // reuses its buffers with other widths and formats) is so filled on the GPU, without a CPU write-back.
 
 #version 450

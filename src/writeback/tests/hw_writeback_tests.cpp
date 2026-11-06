@@ -1135,7 +1135,7 @@ int TestReadbackObservesPendingDraw(const gpu::VulkanHandles& handles) {
 
 // IN-335 replay control: a double-buffered 2D scene in which every frame draws into the back buffer
 // while ZBUF (Z writes masked) stays at page 0, so on every other frame the unused depth buffer shares
-// the pages of the buffer being drawn: the pattern of GT4's boot and menu screens (ZBUF = 0x100000000).
+// the pages of the buffer being drawn: the pattern of the game's boot and menu screens (ZBUF = 0x100000000).
 // The legacy capture is replayed through the CPU reference and through the GPU write-back renderer; every
 // frame must give the same composed image and the same 4 MiB local memory hash. Only sprites are drawn,
 // whose coverage and attributes both rasterisers are specified to agree on exactly, so any difference is
@@ -1331,7 +1331,7 @@ int TestPresentationFieldPhase() {
     check(weave.GetCounters().interlaceOffsetFrames == 1 && weave.GetCounters().deinterlacedFrames == 2,
           "weave: one field offset (the CSR.FIELD = 0 field), two deinterlaced fields");
 
-    // Field phase (IN-339): each field buffer holds its own lines, as GT4's field rendering does. The frame
+    // Field phase (IN-339): each field buffer holds its own lines, as the game's field rendering does. The frame
     // whose display field is CSR.FIELD = 1 holds the upper lines (2k), the CSR.FIELD = 0 frame the lower
     // lines (2k + 1). Weaving the pair must give the progressive frame, line y = lineColour(y); the IN-35
     // reading (field 1 shifted down) puts every line two rows from its partner and fails here.
@@ -1518,7 +1518,7 @@ cpuref::CaptureWriter CacheFixtureCapture() {
         // 7. A draw into A whose ZBUF is A itself with Z written (test ALWAYS): the write-back fallback.
         ad({frameReg(kA), 0x4C, zbufReg(kA, false), 0x4E, uint64_t{1} << 16 | (uint64_t{1} << 17), 0x47, kSprite, 0x00,
             rgbaq(0x80EEDDCCu), 0x01, xyz(50, 2), 0x05, xyz(62, 12), 0x05});
-        // 8. GT4's buffer reuse (IN-350): page 48 drawn 128 wide (FBW 2), then 64 wide at the same base (the first
+        // 8. The game's buffer reuse (IN-350): page 48 drawn 128 wide (FBW 2), then 64 wide at the same base (the first
         //    target is parked in the GLM and the second loads from it), then partial CT16 and T4 uploads into it
         //    (merged into the GLM-owned pages), then read as a CT32 texture into A.
         ad({(uint64_t{1} << 16) | (uint64_t{2} << 17), 0x47, frameReg(48) | (uint64_t{1} << 16), 0x4C,
@@ -2189,7 +2189,7 @@ int TestScaleTargetExtent(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// hw_scale_display_shadow (owner test 6, IN-377): GT4's race double buffer at an internal scale. Each frame first draws
+// hw_scale_display_shadow (owner test 6, IN-377): the game's race double buffer at an internal scale. Each frame first draws
 // a small target whose depth buffer lies on the buffer the next VBlank shows (finished one frame earlier), then the
 // back buffer, then shows the other buffer: the depth load drops the shown buffer's colour slot, so before IN-377 the
 // presented frame was composed from the GLM at 1x (no visible upscaling). Two variants:
@@ -2400,15 +2400,15 @@ int TestScaleDisplayShadow(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// hw_scale_fullscreen_passes (owner test 7, IN-379/IN-380): the two full-screen passes that made GT4's race look 1x
+// hw_scale_fullscreen_passes (owner test 7, IN-379/IN-380): the two full-screen passes that made the game's race look 1x
 // at every scale, each in a minimal capture, checked on the presented scaled frame against the 06.3 exact expectation
 // of the final 1x image (the hw_scale_exact rule: sub-pixel (sx, sy) shows native ((sx - h) / s, (sy - h) / s)).
 //   - "copy": the frame is copied into the shown buffer through a REGION_CLAMP texture whose power-of-two size
-//     (256 x 128) is larger than the rendered area (100 x 60), as GT4's CT16 conversion does (640 x 448 through
+//     (256 x 128) is larger than the rendered area (100 x 60), as the game's CT16 conversion does (640 x 448 through
 //     1024 x 512). The copy must sample the target's scaled image (IN-380), not the 1x words.
 //   - "tone": after the frame is drawn, a tone sequence reads it through an 8-bit (T8) view into a temporary page and
 //     writes a result back into the same memory through a CT24 view with T8-textured, FIX-blended sprites. The
-//     result is a per-channel function of the frame (Cd - Cd * FIX / 128), like GT4's RGB tone curve, so the scaled
+//     result is a per-channel function of the frame (Cd - Cd * FIX / 128), like the game's RGB tone curve, so the scaled
 //     image after the sequence must be that function of the scaled image before it (IN-379).
 // Memory must equal the 1x run (the 1x words stay the only authority). Both cases fail without the fix.
 int TestScaleFullscreenPasses(const gpu::VulkanHandles& handles) {
@@ -2865,7 +2865,7 @@ int TestToneHleExact(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// hw_scale_interlaced_present (IN-381): 480i field-mode frames (FFMD = 1, as GT4's menus) presented at an internal
+// hw_scale_interlaced_present (IN-381): 480i field-mode frames (FFMD = 1, as the game's menus) presented at an internal
 // scale go through the GPU compose and the GPU deinterlace of 13.3/13.4 counted in native rows.
 //   - Exactness: the field buffer is filled by EE uploads (1x words, so its scaled image is every native pixel as an
 //     s x s block) with per-field lines and a moving half. For every mode (auto = adaptive, weave, bob, blend) and
@@ -3428,7 +3428,7 @@ int CheckCore2Ab(const gpu::VulkanHandles& handles, const char* name, const cpur
     return failures;
 }
 
-// GT4's palette pattern (IN-407): a 16 x 16 palette drawn as untextured sprites with no depth test, a CLUT load from it
+// The game's palette pattern (IN-407): a 16 x 16 palette drawn as untextured sprites with no depth test, a CLUT load from it
 // right away and a T8 sprite through it, every frame with new colours.
 cpuref::CaptureWriter Core2PaletteSpritesCapture(uint32_t frames) {
     cpuref::CaptureWriter palettes;
@@ -3481,10 +3481,10 @@ cpuref::CaptureWriter Core2PaletteSpritesCapture(uint32_t frames) {
     return palettes;
 }
 
-// GT4's GPU palettes (IN-408, the night race): a palette drawn on the GPU from a texture (so the CPU sprite path cannot
+// The game's GPU palettes (IN-408, the night race): a palette drawn on the GPU from a texture (so the CPU sprite path cannot
 // take it) and loaded right away as a T8 CLUT; then a T4 CLUT loaded from memory into group 1 (CSA 1); then the T8
 // palette used again without a load, so its groups come from both loads; then a CT32 target drawn on the GPU read
-// back as a T8 texture (GT4 reads its 128 x 128 night render that way), through the same palette.
+// back as a T8 texture (the game reads its 128 x 128 night render that way), through the same palette.
 cpuref::CaptureWriter Core2GpuPaletteCapture(uint32_t frames) {
     cpuref::CaptureWriter capture;
     constexpr uint64_t kA = 0, kT8 = 12, kClut = 14, kSource = 16, kClut4 = 18, kT4 = 20, kRender = 22;  // pages
@@ -3584,7 +3584,7 @@ cpuref::CaptureWriter Core2GpuPaletteCapture(uint32_t frames) {
     return capture;
 }
 
-// IN-408 ageing (owner report, GT4's title after a GT Mode visit): a CT32 target drawn once on the GPU and then only
+// IN-408 ageing (owner report, the game's title after a menu visit): a CT32 target drawn once on the GPU and then only
 // read through GS memory (a T8 texture over it, every frame) must still age out after 60 unused frames (6.2), its
 // drawn pixels stored to memory first since no readback ever did; then an EE upload in the target's own view
 // replaces part of that memory and the T8 sprite must show the upload.
@@ -3656,7 +3656,7 @@ cpuref::CaptureWriter Core2GpuReadAgeingCapture(uint32_t frames) {
     return capture;
 }
 
-// IN-415 / IN-416 (GT4's streamed textures over its night render): a CT32 target drawn on the GPU and read as a T8
+// IN-415 / IN-416 (the game's streamed textures over its night render): a CT32 target drawn on the GPU and read as a T8
 // texture (a GPU read, no readback), then an EE write over its memory in another view, three kinds in turn:
 //   frame % 3 == 0: 128 x 64 T8 over the whole target page (IN-415: whole pages replaced, no store);
 //   frame % 3 == 1: 64 x 16 T4 at the target's base (another layout, no shortcut: the drawn pixels are stored, IN-411);
@@ -3746,7 +3746,7 @@ cpuref::CaptureWriter Core2StreamOverRenderCapture(uint32_t frames) {
     return capture;
 }
 
-// IN-508 (GT4's Z32 target and the stream after it on George V Paris): a CT32 target over pages 22 and 23 (FBW 2), drawn
+// IN-508 (the game's Z32 target and the stream after it on George V Paris): a CT32 target over pages 22 and 23 (FBW 2), drawn
 // only inside page 22 and read as a T8 texture on the GPU, then an EE write in another layout:
 //   frame % 2 == 0: 128 x 64 T8 in page 23, in the target's page row but sharing no page with its drawn area;
 //   frame % 2 == 1: 64 x 16 T4 in page 22, over the drawn page: the drawn pixels are stored (IN-411).
@@ -3821,7 +3821,7 @@ cpuref::CaptureWriter Core2WriteBesideDrawnCapture(uint32_t frames, bool readFir
     return capture;
 }
 
-// IN-509 (GT4's Z target at BP 0 on George V Paris): page 22 is drawn as FBW 1 every frame and, after that, as FBW 2 every
+// IN-509 (the game's Z target at BP 0 on George V Paris): page 22 is drawn as FBW 1 every frame and, after that, as FBW 2 every
 // second frame, where it is also read as a T8 texture on the GPU. So the FBW 1 draw finds the FBW 2 target two VBlanks old,
 // with pixels only the GPU read. The picture samples both targets inside this frame's sprites.
 cpuref::CaptureWriter Core2WidthEverySecondVblankCapture(uint32_t frames) {
@@ -3882,7 +3882,7 @@ cpuref::CaptureWriter Core2WidthEverySecondVblankCapture(uint32_t frames) {
     return capture;
 }
 
-// IN-513 (GT4's textures over its small targets): a CT32 target drawn on the GPU and read as a T8 texture in several batches of
+// IN-513 (the game's textures over its small targets): a CT32 target drawn on the GPU and read as a T8 texture in several batches of
 // one frame: the same read twice (reusable), after a new draw over it, after an EE write over its memory, and after a draw
 // elsewhere in the same frame. Each change must show in the picture.
 cpuref::CaptureWriter Core2TextureOverTargetCapture(uint32_t frames) {
@@ -3949,10 +3949,10 @@ cpuref::CaptureWriter Core2TextureOverTargetCapture(uint32_t frames) {
     return capture;
 }
 
-// IN-417 (GT4's palettes in the memory of its night render): page 22 holds a CT32 target (a colour sprite over the
+// IN-417 (the game's palettes in the memory of its night render): page 22 holds a CT32 target (a colour sprite over the
 // palette's 16 x 16) and a Z24 target (a depth-only sprite over half of it), both drawn on the GPU; then a T8 texture
 // loads its CSM1 palette from page 22 and is drawn. The CLUT load overlaps two drawn targets, one of them depth.
-// `repeated` (IN-510): palettes of the same page, in turn as GT4 does, are then loaded again with nothing changed (the GLM
+// `repeated` (IN-510): palettes of the same page, in turn as the game does, are then loaded again with nothing changed (the GLM
 // writes can be left out), after an EE upload over them, and after a new draw over them: those two must show in the picture.
 cpuref::CaptureWriter Core2MultiTargetClutCapture(uint32_t frames, bool repeated = false) {
     cpuref::CaptureWriter capture;
@@ -4032,7 +4032,7 @@ cpuref::CaptureWriter Core2MultiTargetClutCapture(uint32_t frames, bool repeated
 }
 
 // IN-427: a CT32 page drawn on the GPU (a colour sprite), then sampled as a texture in its own view (CORE2-SPEC 3.2:
-// a texture taken from a target) by a sprite into page 0, as GT4 copies its 3D scene through its tone pass. At 1x the
+// a texture taken from a target) by a sprite into page 0, as the game copies its 3D scene through its tone pass. At 1x the
 // copy read the texel atlas instead of the target, so page 0 stayed black; memory must equal the CPU reference.
 cpuref::CaptureWriter Core2TargetTextureCapture(uint32_t frames) {
     cpuref::CaptureWriter capture;
@@ -4311,7 +4311,7 @@ struct SegmentCapture {
     }
 };
 
-// TASK-168: GT4's player view: one T8 texture drawn again and again, a CLUT load before each sprite that only changes its
+// TASK-168: the game's player view: one T8 texture drawn again and again, a CLUT load before each sprite that only changes its
 // palette (CT32, CSM1, from GS memory). `palettes` palettes, eight per page from page 40 (four blocks each), uploaded with
 // new colours every frame; the 12 x 12 sprites blend over each other, so their order matters. Each frame starts with an
 // uploaded 16 x 16 texture stretched over the whole 64 x 64 frame (a GPU draw, so the target covers the frame from the
@@ -4417,7 +4417,7 @@ cpuref::CaptureWriter Core2PaletteSegmentsGpuCapture(uint32_t frames) {
     return c.capture;
 }
 
-// TASK-168: a T8 sprite batch over a drawn 32-bit target (GT4's tone sequence, CORE2-SPEC 7.2) whose palette changes between
+// TASK-168: a T8 sprite batch over a drawn 32-bit target (the game's tone sequence, CORE2-SPEC 7.2) whose palette changes between
 // its sprites: ToneHook takes one palette per batch, so core 2 hands it the segments one by one. The 32 x 32 target at
 // page 0 (the display) is drawn on the GPU from an uploaded texture; the 8-wide sprites read it as T8 into page 4.
 cpuref::CaptureWriter Core2PaletteSegmentsToneCapture(uint32_t frames) {
@@ -4454,7 +4454,7 @@ cpuref::CaptureWriter Core2PaletteSegmentsToneCapture(uint32_t frames) {
     return c.capture;
 }
 
-// TASK-168b: GT4's tone sequence as the player's view sends it: the run's first draw reads the 32-bit target (one 8 x 32 T8
+// TASK-168b: the game's tone sequence as the player's view sends it: the run's first draw reads the 32-bit target (one 8 x 32 T8
 // sprite, its own batch: the next TEX0 changes the texture base), then the copy-back strips read the T8 page at page 12
 // with a CLUT load before each 8 x 32 sprite, one batch of three palette segments. ToneHook skips every strip (a run is
 // going on, the same shape and FBMSK) without reading its palette, so core 2 skips the segments without a batch each.
@@ -4530,12 +4530,12 @@ cpuref::CaptureWriter Core2PaletteSegmentsNoShuffleCapture(uint32_t frames) {
     return c.capture;
 }
 
-// hw_core2_palette_segments: the GT4 profile's palette-segment rule on CLUT loads that only change the palette of the
+// hw_core2_palette_segments: the the game profile's palette-segment rule on CLUT loads that only change the palette of the
 // pending batch's T8 texture. The same images and GS memory with the rule off and on, at 1x and 2x; with it on, one batch per
 // run of loads (its sprites drawn with a palette row each); loads from a drawn target, or after a GPU palette, still end
 // the batch; a T8 batch over a 32-bit target goes to the tone hook segment by segment; TASK-168b: a tone run's copy-back
 // strips form no segment (the batch filter ends the batch at their loads), and T8 sprites over a 32-bit target that are
-// not of the tone sequence's shape are drawn whole. The rule is off in the GT4 profile's defaults, so the "on" runs set
+// not of the tone sequence's shape are drawn whole. The rule is off in the the game profile's defaults, so the "on" runs set
 // it explicitly.
 int TestCore2PaletteSegments(const gpu::VulkanHandles& handles) {
     const char* kSwitch = nullptr;  // the segment rule is a profile setting, not an option
@@ -4698,7 +4698,7 @@ int TestCore2PaletteSegments(const gpu::VulkanHandles& handles) {
 int TestCore2ToneEarlyDrop(const gpu::VulkanHandles& handles) {
     const char* kSwitch = "COREGS_CORE2_TONE_EARLY_DROP";
     const auto profile = [](writeback::Renderer& renderer, bool) {
-        renderer.SetProfile(gt4::MakeProfile());  // tone runs are a GT4 profile rule
+        renderer.SetProfile(gt4::MakeProfile());  // tone runs are a the game profile rule
     };
     int failures = 0;
     constexpr uint32_t kFrames = 3;
@@ -4924,7 +4924,7 @@ int TestCore2TextureReplacement(const gpu::VulkanHandles& handles) {
 }
 
 // Spec 8.8: a 64 x 64 CT32 pattern drawn into pages 0-1 from an uploaded texture, then one FST sprite that samples
-// pages 0-1 themselves and writes their top-left 32 x 32 at half size, as GT4's luminance reduction does in place: pixel
+// pages 0-1 themselves and writes their top-left 32 x 32 at half size, as the game's luminance reduction does in place: pixel
 // (x, y) reads texels near (2x, 2y), which the same sprite also writes when they are inside 32 x 32. The reference
 // rasterises in order, so every such texel is read before the sprite reaches it; the GPU must read a copy taken before
 // the batch. With `selfSampled` false the pattern is also drawn into pages 2-3 and the sprite samples those instead,
@@ -5083,7 +5083,7 @@ int TestCore2ComputeFills(const gpu::VulkanHandles& handles) {
 }
 
 // hw_core2_delayed_downloads (IN-439 and IN-441, decision 0073): every frame draws a 2 x 1 sprite of a new colour into a CT32
-// target and downloads it (GT4's light flare test pattern). With COREGS_CORE2_DELAYED_DOWNLOADS=1 the first download is
+// target and downloads it (the game's light flare test pattern). With COREGS_CORE2_DELAYED_DOWNLOADS=1 the first download is
 // read back exactly and each later one answers with an earlier frame's colour, never its own; with =0 every download
 // is the frame's own colour. At 3x.
 int TestCore2DelayedDownloads(const gpu::VulkanHandles& handles) {
@@ -5093,7 +5093,7 @@ int TestCore2DelayedDownloads(const gpu::VulkanHandles& handles) {
     auto xyz = [](uint32_t x, uint32_t y) { return uint64_t{x * 16} | (uint64_t{y * 16} << 16); };
     for (bool delayed : {false, true}) {
         _putenv_s("COREGS_CORE2_DELAYED_DOWNLOADS", delayed ? "1" : "0");
-        _putenv_s("COREGS_CORE2_CPU_SPRITES", "0");  // the tiny sprite on the GPU, as GT4's flare tests are
+        _putenv_s("COREGS_CORE2_CPU_SPRITES", "0");  // the tiny sprite on the GPU, as the game's flare tests are
         _putenv_s("COREGS_HW_CORE", "2");
         writeback::Renderer renderer;
         _putenv_s("COREGS_HW_CORE", "");
@@ -5148,7 +5148,7 @@ int TestCore2DelayedDownloads(const gpu::VulkanHandles& handles) {
         std::printf("  %s: delayed answers %llu\n", delayed ? "delayed" : "exact", static_cast<unsigned long long>(answered));
         if (wrong != 0 || renderer.Failed() || (delayed ? answered != 5 : answered != 0)) ++failures;
     }
-    // The GT4 profile's light-flare rule: a 64 x 8 CT32 download (its flare visibility table) is answered as zeros
+    // The the game profile's light-flare rule: a 64 x 8 CT32 download (its flare visibility table) is answered as zeros
     // without a readback, and any other download keeps the drawn colour.
     {
         _putenv_s("COREGS_CORE2_DELAYED_DOWNLOADS", "0");
@@ -5241,7 +5241,7 @@ int TestCore2Specialised(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// What GT4 does every VBlank: textures A and C (CT32, whole blocks), B over part of A, then A again, a T8 texture with whole
+// What the game does every VBlank: textures A and C (CT32, whole blocks), B over part of A, then A again, a T8 texture with whole
 // blocks and one that ends inside a block (never remembered); sprites show them and memory is compared.
 cpuref::CaptureWriter Core2UploadMemoCapture(uint32_t frames, bool spriteOverA = false) {
     cpuref::CaptureWriter capture;
@@ -5345,7 +5345,7 @@ int TestCore2Rop(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// A 640 x 448 frame filled with half alpha, then GT4's sheen: a small target added over the screen as Cs Ad + Cd.
+// A 640 x 448 frame filled with half alpha, then the game's sheen: a small target added over the screen as Cs Ad + Cd.
 cpuref::CaptureWriter Core2RoadSheenCapture() {
     cpuref::CaptureWriter capture;
     constexpr uint64_t kA = 0, kSmall = 200;  // pages
@@ -5373,7 +5373,7 @@ cpuref::CaptureWriter Core2RoadSheenCapture() {
 }
 
 // hw_core2_road_sheen (IN-500): the switch skips that pass and changes the picture; it is drawn unless told otherwise.
-// hw_core2_road_sheen: the GT4 profile names the full-screen sheen pass; skipping it changes the picture and it is
+// hw_core2_road_sheen: the the game profile names the full-screen sheen pass; skipping it changes the picture and it is
 // drawn unless the profile says otherwise. The exact early-out of that pass must not change the picture.
 int TestCore2RoadSheen(const gpu::VulkanHandles& handles) {
     int failures = 0;
@@ -5509,7 +5509,7 @@ int TestCore2UploadMemo(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// GT4's depth clear (IN-529): a scene drawn with its depth far away, then black sprites of z 0 with FRAME at the depth buffer's
+// The game's depth clear (IN-529): a scene drawn with its depth far away, then black sprites of z 0 with FRAME at the depth buffer's
 // base as CT24 and ZBUF one page after it, then a sprite with a GEQUAL test that must pass everywhere.
 cpuref::CaptureWriter Core2DepthClearCapture(uint32_t frames) {
     cpuref::CaptureWriter capture;
@@ -6110,7 +6110,7 @@ int TestCore2GlmMemo(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// hw_core2_patch_bits (IN-512): COREGS_CORE2_PATCH_BITS on small writes in another format over a drawn page: GT4's T4 pattern
+// hw_core2_patch_bits (IN-512): COREGS_CORE2_PATCH_BITS on small writes in another format over a drawn page: the game's T4 pattern
 // and T4, T8 and CT16 writes over a GPU-read render: no store for them, with the same picture and memory.
 int TestCore2PatchBits(const gpu::VulkanHandles& handles) {
     int failures = 0;
@@ -6412,7 +6412,7 @@ int TestCore2OverTargetMemo(const gpu::VulkanHandles& handles) {
 
 // hw_core2_cpu_sprites (IN-407): COREGS_CORE2_CPU_SPRITES (small untextured sprites drawn by the CPU reference into GS
 // memory) on the hw_cache_equals_writeback stream (palettes behind a depth test, T8/T4 textures, uploads, moves, a
-// readback) and on GT4's palette-sprite pattern, whose memory must equal the reference exactly and whose CLUT loads
+// readback) and on the game's palette-sprite pattern, whose memory must equal the reference exactly and whose CLUT loads
 // must need no readback with the switch on.
 int TestCore2CpuSprites(const gpu::VulkanHandles& handles) {
     const char* kSwitch = "COREGS_CORE2_CPU_SPRITES";
@@ -6443,7 +6443,7 @@ int TestCore2CpuSprites(const gpu::VulkanHandles& handles) {
     return failures == 0 ? 0 : 1;
 }
 
-// hw_core2_gpu_clut (IN-408): COREGS_CORE2_GPU_CLUT (CLUT loads from a drawn target read on the GPU) on GT4's GPU palette
+// hw_core2_gpu_clut (IN-408): COREGS_CORE2_GPU_CLUT (CLUT loads from a drawn target read on the GPU) on the game's GPU palette
 // pattern and on the hw_cache_equals_writeback stream. With the switch on the palette's CLUT loads need no readback,
 // they are read from the target on the GPU, the T8 sprites are expanded through the GPU CLUT (palette rows, IN-409),
 // and the T4 load from memory is mirrored into it (the last T8 sprite mixes both loads).
@@ -6682,7 +6682,7 @@ bool ReplayWithEnv(const gpu::VulkanHandles& handles, const cpuref::CaptureWrite
     return ok && !renderer.Failed();
 }
 
-// hw_core2_effect_toggles: the GT4 profile's rules are independent. The faithful profile draws the same picture
+// hw_core2_effect_toggles: the the game profile's rules are independent. The faithful profile draws the same picture
 // as the generic core; dropping the sheen pass changes it; the light-flare rule answers only the 64 x 8 table.
 int TestCore2EffectToggles(const gpu::VulkanHandles& handles) {
     int failures = 0;
@@ -6710,7 +6710,7 @@ int TestCore2EffectToggles(const gpu::VulkanHandles& handles) {
         if (withoutSheen.stats.roadSheensSkipped == 0 || withoutSheen.images == withProfile.images) ++failures;
     }
 
-    // The light-flare rule: the GT4 profile with the rule on answers its 64 x 8 CT32 table as zeros; the generic core
+    // The light-flare rule: the the game profile with the rule on answers its 64 x 8 CT32 table as zeros; the generic core
     // and the faithful profile read the drawn words, and another shape is never substituted.
     auto flare_answer = [&](const coregs::GameProfile& profile, std::uint32_t width, std::uint32_t height,
                             std::vector<std::uint32_t>& words) {

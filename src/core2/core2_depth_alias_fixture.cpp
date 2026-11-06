@@ -3,7 +3,7 @@
 // (decision 0070).
 //
 // CTest hw_core2_depth_alias (IN-535): the colour pixels a 32-bit depth fill replaces, against memory::pixelSlot
-// pixel by pixel. GT4's environment map clear (colour at 11200, depth one page later, 256 wide, two 64-wide sprites)
+// pixel by pixel. The game's environment map clear (colour at 11200, depth one page later, 256 wide, two 64-wide sprites)
 // gives columns 64-127 and 192-255; random bases, widths, rectangles and kept areas give exactly the colour pixels
 // whose words lie in a wholly written depth block, outside every kept rectangle, each once.
 
@@ -62,7 +62,7 @@ void CheckSprites() {
 }
 
 void CheckEnvironmentMapClear() {
-    // GT4 (Spec II and v2.00 races): FRAME 11200 / 4 CT32 and ZBUF 11232 Z32, two sprites over (0,0)-(63,255) and
+    // The reference game (v2.00 and Spec II): FRAME 11200 / 4 CT32 and ZBUF 11232 Z32, two sprites over (0,0)-(63,255) and
     // (128,0)-(191,255), the colour kept where the same sprites write it.
     const BufferView depth{11232, 4, Psm::Z32}, colour{11200, 4, Psm::Ct32};
     const std::vector<PixelRect> sprites{PixelRect{0, 0, 63, 255}, PixelRect{128, 0, 191, 255}};

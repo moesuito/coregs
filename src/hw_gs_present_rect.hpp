@@ -28,7 +28,7 @@ inline PresentRect present_rect_widescreen(std::uint32_t width, std::uint32_t he
 }
 
 // TASK-080 display-aspect fill (GS-STREAM-PROTOCOL 6.7 CONTROL display_aspect semantics; the same rectangle as the
-// default renderer's gt4::vulkan::presentation_rect_ratio): the largest rectangle of `ratio` (width / height) centred
+// default renderer's display-aspect rectangle): the largest rectangle of `ratio` (width / height) centred
 // in width x height, rounded to the nearest pixel, so a ratio wider than the window is letterboxed and never stretched
 // to the whole window. A ratio of 0 (or not positive) is the protocol's "whole window".
 inline PresentRect present_rect_ratio(std::uint32_t width, std::uint32_t height, double ratio) {

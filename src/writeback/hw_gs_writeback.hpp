@@ -391,7 +391,7 @@ public:
     // IN-370: GPU CLUT loads are deferred; an indexed texture whose palette the last deferred load wrote reads it
     // from the GLM (default on).
     void SetClutDefer(bool enabled);
-    // IN-383 A/B switch (COREGS_HW_TONE_HLE): GT4's tone-sequence strip batches run as one dispatch per page (default
+    // IN-383 A/B switch (COREGS_HW_TONE_HLE): the game's tone-sequence strip batches run as one dispatch per page (default
     // on); off, every strip takes the normal path.
     void SetToneHle(bool enabled);
     // IN-383: COREGS_HW_VERIFY_SHUFFLE, execute both and compare the written page (09.4, 12.8 `COREGS_HW_VERIFY_SHUFFLE`).

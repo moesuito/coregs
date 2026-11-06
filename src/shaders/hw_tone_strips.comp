@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 //
-// GT4's tone-sequence strip executor (TASK-027, parity plan item 2; chapters 09.4 variant A and 07.4).
+// The game's tone-sequence strip executor (TASK-027, parity plan item 2; chapters 09.4 variant A and 07.4).
 // Copyright (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec (clean room, decision 0070).
 //
-// Every race frame GT4 converts its 32-bit frame buffer page by page: it reads the page through an 8-bit (T8) view
+// Every race frame the game converts its 32-bit frame buffer page by page: it reads the page through an 8-bit (T8) view
 // with a ramp CLUT into a temporary page (three additive channel batches), then writes the result back with eight
 // decal T8 sprites, one per 8-pixel column block of the page. Each strip is eight wide and 32 tall with one texel
 // per pixel, so its exact effect on the destination (chapter 09.4 variant A) is

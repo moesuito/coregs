@@ -234,7 +234,7 @@ void FrontEnd::ImageQwords(uint32_t path, const Qword* qwords, size_t count) {
 
 void FrontEnd::StripVertices(const StripVertex* vertices, size_t count) {
     // IN-467: in a triangle strip a vertex only matters to the drawing kicks up to two vertices after it, and most of
-    // GT4's strip vertices do not draw (ADC). Of a run of non-drawing kicks the first goes through Kick (the flush
+    // The game's strip vertices do not draw (ADC). Of a run of non-drawing kicks the first goes through Kick (the flush
     // decision: nothing it reads changes during the run) and the last two (the queue the next kick needs, and the
     // registers it leaves); the ones between only count, as Kick would count them.
     const bool skipRuns =
@@ -406,7 +406,7 @@ void FrontEnd::OnTex0Write(uint32_t contextIndex) {
         }
         if (beforeLocalRead_) {
             // CSM1 palettes sit in one page from CBP (a second page covers an unaligned CBP); CSM2 reads a
-            // TEXCLUT row anywhere in a CBW-wide buffer, so the whole memory is reported (rare in GT4).
+            // TEXCLUT row anywhere in a CBW-wide buffer, so the whole memory is reported (rare in the game).
             const BlockRange range = write.csm == 0 ? BlockRange{write.cbp & ~31u, 64u} : BlockRange{0u, kBlocksTotal};
             beforeLocalRead_(range);
         }
@@ -568,7 +568,7 @@ void FrontEnd::Kick(const GifKick& kick) {
     }
 
     if (options_.fastPaths && !kick.drawing) {
-        // IN-366: a non-drawing kick (ADC, about 70-80% of GT4's strip vertices) only advances the queue once the
+        // IN-366: a non-drawing kick (ADC, about 70-80% of the game's strip vertices) only advances the queue once the
         // primitive has its vertices, exactly as below without the candidate copy and the cull.
         const size_t needed = type == PrimType::Point ? 1u
                               : (type == PrimType::Line || type == PrimType::LineStrip || type == PrimType::Sprite) ? 2u
@@ -903,7 +903,7 @@ bool FrontEnd::BatchTouches(uint32_t begin, uint32_t count, bool asDestination) 
 }
 
 // TASK-149: a mipmapped draw also reads its levels 1..MXL, at MIPTBP1 (levels 1-3) and MIPTBP2 (levels 4-6), or with MTBA
-// packed after level 0. An upload over any level must draw the pending batch first: GT4 streams textures by PATH3 over the
+// packed after level 0. An upload over any level must draw the pending batch first: the game streams textures by PATH3 over the
 // Nordschleife fences' level 2 right after sending the fences, which then showed another texture's pixels. The level
 // footprints are as conservative as level 0's (whole page rows); MTBA counts the next level-0 footprint.
 bool FrontEnd::MipLevelsTouch(const ContextRegs& ctx, uint32_t levelZeroBlocks, uint32_t begin, uint32_t count) const {

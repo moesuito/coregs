@@ -3,7 +3,7 @@
 // Scaled tone-curve carry (TASK-027 M12, chapter 09.4 policy 2, IN-379). Copyright (c) 2026 GT4Recomp contributors.
 // Written from docs/hw-renderer-spec chapters 06.8 and 09.3/09.4, clean room (decision 0070).
 //
-// GT4 runs every race frame through an RGB tone curve: it reads its 32-bit frame buffer through 8-bit views and a
+// The game runs every race frame through an RGB tone curve: it reads its 32-bit frame buffer through 8-bit views and a
 // ramp CLUT page by page and writes the result back (09.4 variant A). Those reinterpretation draws go through the GLM
 // at 1x, so the frame's scaled image ends up as the 1x result blown up (owner test 7). The 1x words stay exact; this
 // kernel only rebuilds the scaled image afterwards. Its net effect per channel is a table: R' = T_r[R], G' = T_g[G],

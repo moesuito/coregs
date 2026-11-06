@@ -313,7 +313,7 @@ bool FastHostToLocal(std::uint8_t *memoryBytes, const BufferView &view, std::uin
     if (swizzle == UploadSwizzle::PageRuns && view.basePointer % memory::kBlocksPerPage == 0) {
         const std::uint32_t *pageOffsets = InPageOffsetTables().perPsm[code].data();
         std::uint32_t diff = 0;
-        // IN-452: PSMCT32 through whole columns (GT4's race uploads are mostly CT32); COREGS_CORE2_CT32_COLUMNS=0 for A/B.
+        // IN-452: PSMCT32 through whole columns (the game's race uploads are mostly CT32); COREGS_CORE2_CT32_COLUMNS=0 for A/B.
         static const bool ct32Columns = std::getenv("COREGS_CORE2_CT32_COLUMNS") == nullptr ||
                                         std::strcmp(std::getenv("COREGS_CORE2_CT32_COLUMNS"), "0") != 0;
         if (ct32Columns && view.psm == memory::Psm::Ct32) {

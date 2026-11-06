@@ -6,7 +6,7 @@
 // Written from the TASK-026 specification (docs/hw-renderer-spec): vectors of chapter 03
 // (draw rectangle table, 1x coverage edges, flat shading, SCANMSK), 05.8 (double-half and
 // striped clears, target and memory clears), 08 (blend table 08.1, group counts over the 81
-// modes, alpha-test folding, DATE selection, V-08-1), 09 (V-09-1, channel shuffles, GT4
+// modes, alpha-test folding, DATE selection, V-08-1), 09 (V-09-1, channel shuffles, the game
 // patterns) and 14.6. The pixel arithmetic reference (src/pixel) is the oracle for
 // blend, fold and dither results.
 //

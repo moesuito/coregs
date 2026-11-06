@@ -97,7 +97,7 @@ void GifParser::Transfer(uint32_t path, const Qword* qwords, size_t count, GifSi
             }
             continue;
         }
-        // IN-366: a PACKED STQ, RGBA, XYZF2 tag whose remaining data is all in this transfer (GT4's VU1 strips,
+        // IN-366: a PACKED STQ, RGBA, XYZF2 tag whose remaining data is all in this transfer (the game's VU1 strips,
         // about 85,000 vertices per 480p race frame) is decoded in one loop: the same register values, Q latch and
         // kicks in the same order as ConsumePacked, handed to the sink at once.
         if (fastStrips_ && state.tag.format == GifFormat::Packed && state.descriptorIndex == 0 && state.tag.nreg == 3 &&

@@ -24,7 +24,7 @@ enum class UploadSwizzle : std::uint8_t {
 // `memoryBytes`, wrapping transfer coordinates at 2048. Returns false (nothing written) when `byteCount` does not
 // cover the whole rectangle or the PSM has no table; the caller then takes the generic path. PageRuns falls back to
 // PerPixel for a base pointer that is not page aligned. Both give the same bytes as memory::hostToLocal.
-// IN-450: `changed`, when given, is set to false when only pixels equal to the ones already there were written (GT4
+// IN-450: `changed`, when given, is set to false when only pixels equal to the ones already there were written (the game
 // uploads most of its textures again every frame). IN-453: `changedBlocks`, when given, is a bit set over the 16384
 // blocks of GS memory in which the bit of every block where a written pixel changed is set (the caller clears them).
 bool FastHostToLocal(std::uint8_t *memoryBytes, const memory::BufferView &view, std::uint32_t x0, std::uint32_t y0,

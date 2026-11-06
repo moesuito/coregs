@@ -1,6 +1,6 @@
 // CTest fixtures for the HWR texture replacement core (TASK-027, M16 and M18 pure part).
 // Vectors come from TASK-026 specification chapters 01, 04.3, 07.5 and 11. Synthetic cases use
-// the reference memory of this directory (not PCSX2 ground truth: see the Q-07 pending test).
+// the reference memory of this directory.
 // Clean room (decision 0069). Copyright (c) 2026 GT4Recomp contributors, MIT.
 #include <algorithm>
 #include <array>
@@ -529,7 +529,7 @@ void TestPackScan() {
                                                          .count())));
   fs::create_directories(root / "SCUS-97328" / "replacements" / "sub");
   fs::create_directories(root / "SCUS-97328" / "replacements" / ".hidden");
-  fs::create_directories(root / "SCUS-97328" / "gt4");
+  fs::create_directories(root / "SCUS-97328" / "textures");
   const auto write = [](const fs::path& path, const std::string& text) {
     std::ofstream out(path, std::ios::binary);
     out << text;
@@ -538,7 +538,7 @@ void TestPackScan() {
   write(root / "SCUS-97328" / "replacements" / ".hidden" / "abc-00001dc0.dds", "b");
   write(root / "SCUS-97328" / "replacements" / "notes.txt", "c");
   write(root / "SCUS-97328" / "replacements" / "1234-1234-00001dd3.png", "d");
-  write(root / "SCUS-97328" / "gt4" / "t-0000000000001234-0000000000000000-8x8.png", "e");
+  write(root / "SCUS-97328" / "textures" / "t-0000000000001234-0000000000000000-8x8.png", "e");
   write(root / "SCUS-97328.zip", "not a zip");
 
   const UnsupportedArchiveReader archives;
@@ -748,7 +748,7 @@ void TestReferenceMemoryFixture() {
   CHECK(laneOk);
 }
 
-// Full-scope run. The Q-07 test (--pending-q07) exits with the CTest skip code instead.
+// Full-scope run over the synthetic packs and reference memory in this directory.
 int RunAll() {
   TestReferenceMemoryFixture();
   TestXxh3();
@@ -772,12 +772,4 @@ int RunAll() {
 
 }  // namespace
 
-int main(int argc, char** argv) {
-  if (argc > 1 && std::strcmp(argv[1], "--pending-q07") == 0) {
-    std::printf(
-        "PENDING Q-07: Format P end-to-end names need owner-generated PCSX2 dumps of a GT4 GS "
-        "capture (TASK-026 open question Q-07). Skipping.\n");
-    return 77;
-  }
-  return RunAll();
-}
+int main(int /*argc*/, char** /*argv*/) { return RunAll(); }

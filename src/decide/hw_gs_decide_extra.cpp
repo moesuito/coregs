@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// HWR per-draw decisions, second part: texture and channel shuffles (chapter 09), GT4
+// HWR per-draw decisions, second part: texture and channel shuffles (chapter 09), the game
 // brightness patterns (09.4), clears (05.8), page rows and the pipeline key (03.9).
 // Written from docs/hw-renderer-spec (clean room, decision 0069). Interpretations are
 // recorded as IN-100 and up in docs/hw-renderer-spec/IMPLEMENTATION-NOTES.md.

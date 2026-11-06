@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 //
-// CORE2 GT4 channel-shuffle hook (TASK-027 core rewrite, CORE2-SPEC 7.2 and its addendum). Copyright (c) 2026
+// CORE2 channel-shuffle hook (TASK-027 core rewrite, CORE2-SPEC 7.2 and its addendum). Copyright (c) 2026
 // GT4Recomp contributors. Written from docs/hw-renderer-spec/CORE2-SPEC.md and chapter 09.4, clean room
 // (decision 0070).
 //
-// GT4's race colour filter as one pass at the internal scale, in place on the filtered 32/24-bit target:
+// The game's race colour filter as one pass at the internal scale, in place on the filtered 32/24-bit target:
 // R' = palette[R].r, G' = palette[G].g, B' = palette[B].b, alpha kept (the write mask is always RGB only). The
 // palette is the CLUT captured at the first draw of the game's shuffle sequence, 256 RGBA8 entries.
 

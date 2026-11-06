@@ -4,7 +4,7 @@
 //
 // IN-535: a depth fill that lands in the memory of a colour buffer at another base pointer. On the GS a depth buffer
 // is GS memory like any other, so its words replace the colour words stored at the same addresses; core 2 keeps
-// depth and colour in separate images, so such a write has to be carried into the colour target. GT4 clears its
+// depth and colour in separate images, so such a write has to be carried into the colour target. The game clears its
 // 256 x 256 environment map with two 64-pixel-wide sprites at x 0 and 128: their colour writes cover columns 0-63
 // and 128-191, and their depth writes, whose buffer starts one page later (FBP + 32 blocks), columns 64-127 and
 // 192-255 (alpha 0x80 from Z 0x80000000).

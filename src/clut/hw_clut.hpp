@@ -149,7 +149,7 @@ private:
     uint32_t sourceLast_ = 0;
     bool copiesData_ = true;
     // IN-360: the source blocks of recent loads, keyed by everything that places the entries. IN-485: with the bytes of
-    // those blocks and the entries read from them. GT4 makes about 1400 loads of 256 entries per VBlank, from about 90
+    // those blocks and the entries read from them. The game makes about 1400 loads of 256 entries per VBlank, from about 90
     // places on a day track and over 2000 on a night one, with uploads all around them: comparing the blocks (1 KiB)
     // answers for 256 reads, the largest GS function on the i5-7200U, and is exact whatever wrote to memory.
     static constexpr uint32_t kMemoBlocks = 4;  // a load over more blocks (a CSM2 row across a page) is not remembered

@@ -60,7 +60,7 @@ struct ScanReport {
 // sorted by path, then archive entries sorted by path, so packs must not rely on it.
 class ReplacementIndex {
  public:
-  // Format G roots: <root>/<serial>/gt4 recursively, plus any .zip found there.
+  // Format G roots: <root>/<serial>/textures recursively, plus any .zip found there.
   ScanReport ScanFormatG(const std::filesystem::path& root, std::string_view serial,
                          const ArchiveReader& archives);
   // Format P roots: <root>/<serial>/replacements recursively, then its .zip archives, then

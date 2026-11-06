@@ -631,7 +631,7 @@ struct Renderer::Impl {
     }
     frametime_shown_possible = surface_capabilities2;
     VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-    app.pApplicationName = "GT4Recomp HWR";
+    app.pApplicationName = "CoreGS";
     app.apiVersion = VK_API_VERSION_1_2;
     VkInstanceCreateInfo info{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     info.pApplicationInfo = &app;
@@ -1152,12 +1152,12 @@ struct Renderer::Impl {
       to_copy.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
       vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
                            nullptr, 1, &to_copy);
-      // Chapter 13.6 (fixed 16:9, the presentation contract of the default renderer and gt4-gs): the composed
-      // frame (640 x 448 for GT4, an anamorphic 16:9 picture with the game's forced widescreen, TASK-079) is
+      // Chapter 13.6 (fixed 16:9, the presentation contract): the composed
+      // frame (640 x 448 for the game, an anamorphic 16:9 picture with the game's forced widescreen, TASK-079) is
       // stretched into the largest centred 16:9 rectangle. Keeping the frame's own 640:448 ratio showed the
       // 16:9 game squeezed into 4:3 with side bars (owner test 3). TASK-080: when the race view was projected for
       // another display ratio (ultrawide, 32:9, 16:10) the game asks for the fill and the frame goes into the
-      // largest centred rectangle of that ratio instead, as the default renderer and gt4-gs do (owner test 6 showed
+      // largest centred rectangle of that ratio instead (owner test 6 showed
       // the widened race squeezed into the 16:9 pillarbox).
       const std::uint64_t aspect = display_aspect.load(std::memory_order_relaxed);
       const bool fill = display_aspect_fill(aspect);
@@ -1823,7 +1823,7 @@ bool Renderer::init(const Options &options, std::string &error) {
   // IN-433: COREGS_HW_FILTER=forced / forced_no_sprite (core 2).
   s.renderer->SetForcedBilinear(options.filter == Filter::forced ? 1u : options.filter == Filter::forced_no_sprite ? 2u : 0u);
   s.renderer->SetClutDefer(options.clut_defer);
-  // IN-383 (parity plan item 2): GT4's tone-sequence strip batches run as one dispatch per page; COREGS_HW_VERIFY_SHUFFLE
+  // IN-383 (parity plan item 2): the game's tone-sequence strip batches run as one dispatch per page; COREGS_HW_VERIFY_SHUFFLE
   // runs both paths and compares the written pages (09.4).
   s.renderer->SetVerifyShuffle(options.verify_shuffle);
   // IN-358 diagnostic (not a 12.8 option): COREGS_HW_CHUNKS_PER_SUBMIT=<n> mid-frame submission interval (0 = off).

@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
     PixelRect traceRect{0, 0, 2047, 2047};
     std::uint32_t scale = 1;     // --scale N (M12, IN-371): internal resolution of the scaled images
     // IN-384 follow-up: --half-pixel native|normal|off sets the 06.3 vertex shift exactly as COREGS_HW_HALF_PIXEL does in
-    // the game, so the presentation can be compared between the three conventions.
+    // The game, so the presentation can be compared between the three conventions.
     float halfPixelShift = 0.0f;  // 0: the native mode (shift = scale), as the game defaults to
     std::string upscaledDir;     // --upscaled-dir DIR: the GPU presentation compose at that scale (IN-372)
     // --check-presented (owner test 6, IN-377): every frame's GPU presentation compose (the image the window shows) is

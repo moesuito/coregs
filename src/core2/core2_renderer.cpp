@@ -136,7 +136,7 @@ BlockSpan WriteSpan(const BufferView &view, const PixelRect &r) {
     if (x0 < 0 || y0 < 0 || x1 >= 2048 || y1 >= 2048) return BlockSpan{0, kAllBlocks};
     const memory::PsmInfo &info = memory::psmInfo(view.psm);
     // A small rectangle gets its exact blocks: the conservative page rows below add a whole page when the base is
-    // not page aligned, and near the end of memory that page wraps to block 0 (GT4 writes 8 x 8 pixels at block
+    // not page aligned, and near the end of memory that page wraps to block 0 (the game writes 8 x 8 pixels at block
     // 16328: the spill page reached the display buffer at block 0 and its top rows were patched from memory).
     {
         const std::int32_t bw = info.blockWidth, bh = info.blockHeight;
@@ -473,7 +473,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     std::uint32_t presentWidth_ = 0, presentHeight_ = 0;
     // IN-433 (C5): COREGS_HW_FILTER=forced samples every texture bilinearly where the game asked for nearest (as the
     // reference renderer's forced bilinear): softer 1x textures magnified at scale (menu grids, map dashes, distant
-    // signs). forced_no_sprite leaves sprites alone: GT4 draws its HUD, fonts and full-screen copies (tone pass, the
+    // signs). forced_no_sprite leaves sprites alone: the game draws its HUD, fonts and full-screen copies (tone pass, the
     // frame copies of its effects) as sprites, where bilinear only blurs. Off by default (faithful).
     std::uint32_t forcedBilinear_ = 0;
     // IN-434 (C5): COREGS_CORE2_ANISO=2|4|8|16 spreads up to that many samples along the long axis of a mipmapped
@@ -515,7 +515,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
 
     std::array<std::uint64_t, memory::kPagesTotal> pageWrites_{};
     // IN-453: an identity per GS memory block (4 KiB pages were the unit before: a texture went stale whenever any
-    // other block of its pages was written, GT4's uploads of the textures beside it). EE uploads give the blocks they
+    // other block of its pages was written, the game's uploads of the textures beside it). EE uploads give the blocks they
     // change the hash of their bytes (SetUploadIds); every other write (readbacks, moves, clears) gives the blocks of
     // its span fresh unique identities. A texture's block key (its address key and its blocks' identities) names its
     // bytes, so an unchanged key is an unchanged decode.
@@ -588,7 +588,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         return reasonWaits_.back();
     }
 
-    // IN-408: CLUT loads from drawn targets on the GPU. GT4 draws and filters palettes on the GPU (night races: several
+    // IN-408: CLUT loads from drawn targets on the GPU. The game draws and filters palettes on the GPU (night races: several
     // per VBlank) and loads a CLUT from them right away; a readback of each was a submit and a full wait. Such a load
     // is now read on the GPU from the target into the GPU copy of the CLUT buffer, and the CPU CLUT unit, which
     // still decides when a load happens, keeps the stale words it read from memory. clutSource_ says, per halfword,
@@ -608,7 +608,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     std::uint64_t clutTargetLoadCount_ = 0;
     bool gpuClutMirror_ = false;
     // Halfwords loaded from memory since the GPU CLUT last received the CPU unit's words: written to the GPU only
-    // right before something on the GPU reads the GPU CLUT (GT4 loads about 500 CLUTs per night VBlank, almost all
+    // right before something on the GPU reads the GPU CLUT (the game loads about 500 CLUTs per night VBlank, almost all
     // from memory; mirroring each one was a copy and a barrier).
     std::array<bool, 512> clutMirrorPending_{};
     bool clutMirrorAnyPending_ = false;
@@ -792,7 +792,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     }  // B0: GPU fence wait time at the last timing line
 
     // TASK-168b: the front end's cheap question about the pending batch (FrontEnd::PaletteSegmentBatchFilter). No for a T8
-    // sprite batch while a tone run is going on: GT4's copy-back strips (about 950 loads per VBlank in the player's view).
+    // sprite batch while a tone run is going on: the game's copy-back strips (about 950 loads per VBlank in the player's view).
     // ToneHook skips such batches whole and never reads their palettes, so a segment saves nothing downstream, while a kept
     // load cost the front end more than the flush it replaces (desktop A/B of the George V lap, 1x: GS thread +4% with the
     // strips merged and skipped at once, +3% when the hook refused them after the front end's memory checks, equal to
@@ -834,7 +834,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     mutable std::uint32_t clutSpanClearBegin_ = 0;
 
     // TASK-168: the consumers that take one palette per batch get a batch's segments one by one, as the CLUT-load flushes
-    // gave them: texture replacement (chapter 11 keys a texture by its palette) and GT4's tone sequence (7.2: ToneHook
+    // gave them: texture replacement (chapter 11 keys a texture by its palette) and the game's tone sequence (7.2: ToneHook
     // decides per batch, from its palette, and keeps a run across batches). ToneHook leaves a batch to the normal path,
     // without reading its palette, unless it is a T8 sprite batch over a 32-bit target (ShuffleSource) or a run is going on.
     //
@@ -926,7 +926,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         // IN-485: remembered palettes (A/B).
         const char *clutMemo = std::getenv("COREGS_CORE2_CLUT_MEMO");
         frontEnd_.MutableClut().SetDataMemo(clutMemo == nullptr || std::strcmp(clutMemo, "0") != 0);
-        // A CLUT load reads GS memory. GT4 draws some of its palettes (the race colour filter's ramp), so a load over
+        // A CLUT load reads GS memory. The game draws some of its palettes (the race colour filter's ramp), so a load over
         // a drawn target reduces that target into memory first, like any host read of drawn pixels (4.2).
         frontEnd_.SetBeforeLocalRead([this](const BlockRange &range) {
             ScopedUs clutTimer(clock_, &PhaseTimes::clut);
@@ -936,7 +936,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
             clutSpanClear_ = false;
             if (clear) return;
             const BlockSpan span{range.begin, range.count};
-            // TASK-168b: with no drawn target over the span (the usual case: GT4's tone-run loads, about 1,260 per VBlank)
+            // TASK-168b: with no drawn target over the span (the usual case: the game's tone-run loads, about 1,260 per VBlank)
             // neither the GPU paths nor a readback below can apply; one walk instead of three.
             bool drawnOver = false;
             for (const Target &t : targets_) {
@@ -989,7 +989,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // drawn targets back on the CPU (A/B).
     const bool multiTarget_ = std::getenv("COREGS_CORE2_GPU_MULTI_TARGET") == nullptr ||
                               std::strcmp(std::getenv("COREGS_CORE2_GPU_MULTI_TARGET"), "0") != 0;
-    // IN-483: GT4 loads palettes over 64 x 64 CT16 targets in its races: 16-bit targets too, or each load makes the CPU wait
+    // IN-483: the game loads palettes over 64 x 64 CT16 targets in its races: 16-bit targets too, or each load makes the CPU wait
     // for the GPU (2 ms per VBlank on the HD 620). COREGS_CORE2_GPU_CT16=0 reads them back (A/B).
     const bool gpuColour16_ = std::getenv("COREGS_CORE2_GPU_CT16") == nullptr || std::strcmp(std::getenv("COREGS_CORE2_GPU_CT16"), "0") != 0;
     // IN-537: photo mode loads a palette every frame from memory inside its 640 x 448 Z16S depth buffer (BP 11520): a
@@ -1012,7 +1012,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     }
 
     // IN-417: whether a CLUT load over `span` can be read on the GPU from the GLM after the drawn targets under it are
-    // written there: at least one drawn target overlaps it and every one is a 32-bit colour or depth target. GT4 loads
+    // written there: at least one drawn target overlaps it and every one is a 32-bit colour or depth target. The game loads
     // palettes from the memory of its 128 x 128 night render, which also holds a Z24 target and lies inside its
     // 640 x 224 frames.
     bool ClutTargetsOnGpu(const BlockSpan &span) const {
@@ -1304,7 +1304,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
 
     // IN-453: an EE upload of `rect` in `view`: the block cells it touches (exactly them: the span of the write would
     // also take the blocks between them, other textures of the same page rows) get the hash of their 256 bytes as
-    // their identity, so any history that leaves a block with the same bytes gives it the same identity (GT4 sends
+    // their identity, so any history that leaves a block with the same bytes gives it the same identity (the game sends
     // textures A, then B over part of A, then A again). With `knownBlocks` only the cells the swizzle saw change are
     // hashed again (changedBlocks_, cleared here); the others hold their bytes and so their identity.
     void SetUploadIds(const BufferView &view, const PixelRect &rect, bool knownBlocks) {
@@ -1409,7 +1409,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // reader then sees what a readback would have stored. 32-bit colour targets are written this way, and 32-bit
     // depth targets too (IN-417); any other drawn target over the span is read back as before. Returns whether a
     // target was written (`any`).
-    // IN-510: at a race start GT4 loads 8 palettes from one small colour and depth pair over 1,000 times per VBlank, and each
+    // IN-510: at a race start the game loads 8 palettes from one small colour and depth pair over 1,000 times per VBlank, and each
     // load wrote both targets into the GLM again (about 2,240 writes, about 20 ms of CPU and GPU, with nothing drawn in
     // between): the drop the owner saw while the cars roll to the line. Textures over targets do the same with other rows.
     // A target's page row is left out when it has not changed since the GLM got it, and nothing has made the GLM wrong for
@@ -1510,7 +1510,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
                 t.glmRowWritten[row] = glmWriteSequence_;
             }
             // Not a use for 6.2 ageing: a readback was not one either, and a target kept alive by reads of its memory
-            // later wins texture lookups over newer memory (GT4's title video after GT Mode).
+            // later wins texture lookups over newer memory (the game's title video after a menu session).
             t.readOnGpu = true;
             any = true;
             stats.materializations++;
@@ -1702,7 +1702,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
                 }
             }
         }
-        // IN-513: inside a VBlank GT4 asks for the same few textures over targets again and again (George V Paris: 353
+        // IN-513: inside a VBlank the game asks for the same few textures over targets again and again (George V Paris: 353
         // decodes of 43 textures, one of them 148 times, each writing targets into the GLM). A decode is reused in its
         // VBlank while its pages were not written and the drawn targets over them have not changed.
         std::uint64_t overSignature = 0;
@@ -1811,7 +1811,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         }
         if (overTargets) {
             // IN-408: decoded from targets' pixels written into the GLM, which change without GS memory page versions
-            // changing: never kept (a later hit would show the targets as they were, GT4's title backdrop after GT
+            // changing: never kept (a later hit would show the targets as they were, the game's title backdrop after GT
             // Mode). The image goes back to the pool at the next VBlank, after every draw that sampled it.
             uncachedTextures_.push_back({image, SizeKey(key.width, key.height)});
             if (overMemoOn_) overMemo_[hash] = OverTargetDecode{key, image, overSignature, writeSequence_};
@@ -1907,7 +1907,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
 
     // IN-408: a target whose drawn pixels a GPU CLUT load or texture read without a readback goes to memory before it
     // is dropped (a width change, 6.2 ageing): before IN-408 that first read had already stored it there, and later
-    // reads of that memory (GT4's title backdrop after a GT Mode visit) must still see it.
+    // reads of that memory (the game's title backdrop after a menu visit) must still see it.
     void KeepGpuReadContent(Target &t) {
         if (!t.alive || !t.readOnGpu || t.drawn.Empty()) return;
         static const bool trace = std::getenv("COREGS_CORE2_READBACK_TRACE") != nullptr;  // diagnostics only
@@ -1974,7 +1974,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         height = std::min(height, maxSide);
         if (width <= t.width && height <= t.height) return true;
         // Rows grow in whole page rows of the target's format, so a target drawn a few rows further each time grows
-        // rarely; never more, or its rows past the buffer would overlap the memory after it (GT4's 224-row menu
+        // rarely; never more, or its rows past the buffer would overlap the memory after it (the game's 224-row menu
         // fields sit right before texture memory: 64-row steps made every texture upload patch the display buffer).
         const std::uint32_t pageRows = memory::psmInfo(t.view.psm).pageHeight;
         const std::uint32_t newWidth = std::max(t.width, width);
@@ -2047,7 +2047,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         return slot;
     }
 
-    // IN-509: on George V Paris GT4 draws a 256 x 256 Z target at BP 0 every second VBlank, after drawing the same memory
+    // IN-509: on George V Paris the game draws a 256 x 256 Z target at BP 0 every second VBlank, after drawing the same memory
     // at other widths. One VBlank of grace made it old each time, so it was dropped and its memory kept: six readbacks,
     // four of 640 x 448 targets, every second VBlank, a frametime that swings like a wave. Two VBlanks of grace keep it
     // beside the others. COREGS_CORE2_WIDTH_GRACE_LONG=0 gives one VBlank (A/B).
@@ -2061,7 +2061,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         const FormatClass cls = ClassOf(view.psm);
         if (cls == FormatClass::None) return nullptr;
         // 2.1: the target of this base, class and width. One of another width is discarded when it is old (not drawn
-        // in this frame or the last two, IN-509); a recent one stays beside the new target (GT4 draws its frame memory
+        // in this frame or the last two, IN-509); a recent one stays beside the new target (the game draws its frame memory
         // as 640 and as 128 pixels wide in the same frame).
         Target *found = nullptr;
         for (Target &t : targets_) {
@@ -2202,7 +2202,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // 4.1: an EE write into `rect` of `view`: a dirty rectangle in every target it lands on.
     // IN-430: a dirty rectangle the target's last pending one (same format) already covers adds nothing, and one that
     // covers the last replaces it: 4.1 patches read GS memory when they are applied, so applying the same words twice
-    // in a row equals applying them once. GT4 uploads its car textures piece by piece over the same page rows of its
+    // in a row equals applying them once. The game uploads its car textures piece by piece over the same page rows of its
     // 256 x 128 targets (up to 8 times a row in one VBlank at the pre-race camera cut), one patch each before.
     // COREGS_CORE2_DIRTY_MERGE=0 keeps every rectangle (A/B).
     const bool dirtyMerge_ = std::getenv("COREGS_CORE2_DIRTY_MERGE") == nullptr ||
@@ -2225,7 +2225,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
 
     // IN-508 (4.1 says "the overlapped pages"): whether a write shares no page with a target's drawn rectangle, so it
     // changes none of its drawn pixels. SpanOfRect counts whole page rows, so a target drawn narrower than its buffer
-    // looks overlapped by what follows its last row: on George V Paris GT4 streams a CT32 texture from page 382 about
+    // looks overlapped by what follows its last row: on George V Paris the game streams a CT32 texture from page 382 about
     // once per VBlank, the page right after the 192 pixels of the last row its Z32 target at page 351 (BW 4) draws.
     // Smaller textures land in that page too, from block 12225 on. Both the store (StoreDrawnBeforeWrite) and the patch
     // of those drawn rows (AddTouchedPagesDirty) go together: without the store memory is older than the drawn pixels,
@@ -2422,7 +2422,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         }
     }
 
-    // IN-512: a small write over drawn 32-bit pages in another format, GT4's 24 x 12 T4 textures every second VBlank in the
+    // IN-512: a small write over drawn 32-bit pages in another format, the game's 24 x 12 T4 textures every second VBlank in the
     // car showroom. 4.1 stores the targets (a GPU wait of 5 to 7 ms, the wave of that screen) so that every target over
     // those pages can be patched from a memory that holds them all. The same merge can run on the GPU with no wait, for
     // the touched blocks only: the drawn targets go into the GLM oldest draw first (what a readback does in memory), each
@@ -2789,7 +2789,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
                              rect.x1, rect.y1, d.x0, d.y0, d.x1, d.y1);
             }
             // 4.1: a target the write covers entirely is deleted, drawn or not: memory now holds newer content for
-            // all of it (GT4 streams textures over the memory of its small effect targets; a kept target would later
+            // all of it (the game streams textures over the memory of its small effect targets; a kept target would later
             // write its old pixels back over the new texture).
             if (!drawnKeptApart && !t.dirty.empty() && t.dirty.back().psm == t.view.psm &&
                 Contains(t.dirty.back().rect, t.valid) && !t.valid.Empty()) {
@@ -2813,7 +2813,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // to GS memory, oldest draw first so the newest content wins.
     // IN-429: when no target after the first has pending dirty rectangles (4.1 patches read GS memory, which the
     // earlier targets' readbacks change), all the reductions go in one submission with one wait; the memory writes
-    // keep the same order, so the result is the same. GT4's pre-race camera cut downloads small areas that span up to
+    // keep the same order, so the result is the same. The game's pre-race camera cut downloads small areas that span up to
     // 35 targets in one VBlank, one GPU round trip each before. COREGS_CORE2_BATCH_READBACK=0 reduces one by one (A/B).
     const bool batchReadback_ = std::getenv("COREGS_CORE2_BATCH_READBACK") == nullptr ||
                                 std::strcmp(std::getenv("COREGS_CORE2_BATCH_READBACK"), "0") != 0;
@@ -2952,7 +2952,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
                                                static_cast<std::uint32_t>(rect.x1), static_cast<std::uint32_t>(rect.y1)};
         DelayedDownload &d = delayed_[key];
         std::string error;
-        if (d.pending) {  // the previous download's words (GT4 recreates the target between them; the words are kept)
+        if (d.pending) {  // the previous download's words (the game recreates the target between them; the words are kept)
             std::vector<std::uint32_t> words;
             if (gpu_.TakeReduced(d.ticket, words, error)) {
                 d.words.swap(words);
@@ -2994,7 +2994,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // A write in the target's own view patches only the written rectangle and needs nothing.
     // COREGS_CORE2_STORE_BEFORE_WRITE=0 turns it off (A/B).
     // IN-415: no store when the write replaces every bit of the whole pages under the target's drawn area: the stored
-    // pixels would all be overwritten. GT4 uploads its streamed textures (64 x 1440 to 64 x 1728 CT32) over the memory
+    // pixels would all be overwritten. The game uploads its streamed textures (64 x 1440 to 64 x 1728 CT32) over the memory
     // of its night render and palette targets once per VBlank, so each store was a GPU wait for nothing.
     // COREGS_CORE2_STORE_SKIP_WHOLE=0 stores anyway (A/B).
     const bool storeSkipWhole_ = std::getenv("COREGS_CORE2_STORE_SKIP_WHOLE") == nullptr ||
@@ -3092,7 +3092,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
                                              ? UploadSwizzle::PerPixel
                                              : UploadSwizzle::PageRuns;
 
-    // IN-486: GT4 sends about 100 textures every VBlank (2.7 MiB in a race), the same bytes to the same places, but over
+    // IN-486: the game sends about 100 textures every VBlank (2.7 MiB in a race), the same bytes to the same places, but over
     // each other (A, then B over part of A, then A again), so memory changes every time and nothing short of doing the
     // write can be skipped. An upload seen twice keeps the blocks it leaves in memory: the next time, the bytes are
     // recognised by their hash and the blocks are compared and copied instead of swizzled pixel by pixel. Only uploads
@@ -3334,7 +3334,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
             return;
         }
         if (swizzled && !changed && keepUnchanged_) {
-            // IN-450: GT4 uploads most of its textures again every VBlank, byte for byte. When no byte changed and no
+            // IN-450: the game uploads most of its textures again every VBlank, byte for byte. When no byte changed and no
             // target lies over the written blocks (a target's pixels are newer than memory, so it must take the write),
             // the page versions stay as they were: the cached decodes, palette rows and GLM pages that read these
             // pages still hold exactly this memory. The upload is still remembered for targets created later (2.4b).
@@ -3409,7 +3409,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
 
     bool OnSync(SyncKind, std::uint32_t, std::uint32_t) override { return false; }
 
-    // ---- 7.2 GT4's channel-shuffle hook ------------------------------------------------------------------------
+    // ---- 7.2 the game's channel-shuffle hook ------------------------------------------------------------------------
     // TASK-168b: PossibleShuffle (below) on the batch of palette segment `segment` alone (PaletteSegmentBatch's vertices, in
     // the same order), without building it.
     bool PossibleShuffleSegment(const Batch &batch, std::uint32_t segment) const {
@@ -3460,7 +3460,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     }
 
     // A possible channel-shuffle draw (addendum: detection). Only the first draw of a run needs its texture base to
-    // resolve to a colour target; later draws (GT4's copy-back strips read the temporary page) only need the shape.
+    // resolve to a colour target; later draws (the game's copy-back strips read the temporary page) only need the shape.
     bool PossibleShuffle(const Batch &batch) const {
         const BatchState &state = batch.state;
         const std::uint64_t prim = state.effectivePrim;
@@ -3555,7 +3555,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         return true;
     }
 
-    // IN-407 (the old core's IN-348): GT4 draws its palettes as small untextured sprites and loads a CLUT from them
+    // IN-407 (the old core's IN-348): the game draws its palettes as small untextured sprites and loads a CLUT from them
     // right away, about three times per VBlank in a night race. On the GPU each one became a target that the CLUT
     // load read back (a submit and a full wait), and the next texture upload over that memory replaced the target.
     // Such a batch is drawn by the CPU reference straight into GS memory instead, like an EE write: exact for
@@ -3886,7 +3886,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         const std::uint64_t tex0 = batch.state.ctx.tex0, texa = batch.state.env.texa, clamp = batch.state.ctx.clamp;
         const std::uint64_t tex1 = batch.state.ctx.tex1;
         // Chapter 11.1: memory sources only; the palette is the CLUT buffer the CPU unit holds. IN-534: a palette loaded on
-        // the GPU (its memory lies under a drawn target) is not in that buffer. GT4 keeps some palettes in the memory of its
+        // the GPU (its memory lies under a drawn target) is not in that buffer. The game keeps some palettes in the memory of its
         // display buffers, so the same texture's palette was read on the GPU in every other frame and the batch drew the
         // game's texture there (the GT Auto logo, doubled when the two buffers held different versions). Such a palette is
         // read from GS memory for the key, as a memory source reads it: a palette the GPU drew does not match a pack name.
@@ -4098,7 +4098,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         return result;
     }
 
-    // IN-529: GT4 clears the depth buffer it is drawing with through a pair of views of its memory: untextured black sprites of z 0
+    // IN-529: the game clears the depth buffer it is drawing with through a pair of views of its memory: untextured black sprites of z 0
     // on the even page columns, with FRAME at the depth buffer's base as CT24 and ZBUF one page after it. The FRAME write lands on
     // the even columns of the depth memory and the ZBUF write on the odd ones, so all of it reads 0 (it splits the scene in two depth
     // ranges). Depth and colour targets of different bases do not meet here, so the clear is drawn as what it is: a write of 0 to
@@ -4140,7 +4140,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         return true;
     }
 
-    // TASK-168b (STUDY-TONE-STRIPS-ONE-PASS.md): GT4's tone run sends about 1,540 draws per VBlank that ToneHook drops
+    // TASK-168b (STUDY-TONE-STRIPS-ONE-PASS.md): the game's tone run sends about 1,540 draws per VBlank that ToneHook drops
     // (its extraction batches and copy-back strips), and the front end used to round, trace and hand over each one first.
     // The front end now asks before that work: the answer is ToneHook's own skip test (a run going on, the run's FBMSK,
     // PossibleShuffle on the batch, which ST rounding does not change), with the side effects OnBatch, ProcessBatch and
@@ -4522,7 +4522,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
             stats.texturesFromTargets++;
             textureTarget->usedThisFrame = true;
             // Spec 8.8: a texture that is the colour or depth target this batch draws into, sampled where the batch
-            // draws (GT4's glow buffers and luminance reductions, about 35 batches per race VBlank): the batch samples
+            // draws (the game's glow buffers and luminance reductions, about 35 batches per race VBlank): the batch samples
             // a copy of the sampled rectangle taken before it (the auto-flush of 2.6 already splits a batch where a
             // later primitive must see an earlier one's pixels). Sampling the target itself raced with the batch's own
             // writes, so 12x frames differed from run to run. COREGS_CORE2_SELF_COPY=0 samples the target itself (A/B).
@@ -4767,7 +4767,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
     // IN-535: a depth fill (constant Z, every sprite pixel written: depth test ALWAYS, no alpha test that drops the depth)
     // whose depth buffer lies in the memory of a 32-bit colour target at another base pointer: the depth words replace
     // the colour words there, as on the GS, block by block (core2_depth_alias.hpp). The batch's own colour write wins
-    // where both land (it reaches memory later). GT4 clears its 256-wide environment map this way, columns 64-127 and
+    // where both land (it reaches memory later). The game clears its 256-wide environment map this way, columns 64-127 and
     // 192-255 through the depth write (alpha 0x80); without them a car's reflection pass that read them wrote alpha 0,
     // and the reflection on a Skyline R34's rear glass, scaled by the alpha behind it, left the car in front sharp
     // through the glass (TASK-142).
@@ -4912,7 +4912,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         if (!psm) return false;
         const BufferView view{memory::blockOfPage(circuit.fbp), circuit.fbw, *psm};
         const FormatClass cls = ClassOf(*psm);
-        // TASK-151: the target of the circuit's base, class and width first; another width only when there is none. GT4's
+        // TASK-151: the target of the circuit's base, class and width first; another width only when there is none. The game's
         // photo mode shows two 640-wide buffers in turn, and one of them shares base 0 with a 1024-wide target of a whole
         // memory draw: shown by the newest-of-any-width rule, that target was used every frame (never aged out) and showed
         // black on every other picture.
@@ -4927,7 +4927,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
         }
         const std::int32_t dbx = circuit.dbx, dby = circuit.dby;
         // IN-532: a target is only shown while it is the newest picture of its memory. When a colour target of another format
-        // drew over the shown pages after it (GT4's race buffers over the language menu's target, as a race returns to the menus),
+        // drew over the shown pages after it (the game's race buffers over the language menu's target, as a race returns to the menus),
         // its pixels are gone from GS memory: the circuit reads as having no source, as on the reference renderer.
         if (found && displayNewestOnly_ && dbx >= 0 && dby >= 0) {
             const PixelRect shown{dbx, dby, dbx + static_cast<std::int32_t>(circuit.read_width) - 1,
@@ -4957,7 +4957,7 @@ struct Renderer::Impl final : public BatchSink, public SyncSink, public Transfer
             return true;
         }
         // 5.2: no target holds the buffer (FMVs, loading screens the EE uploaded): GS memory at 1x.
-        // IN-531: only when something wrote this buffer as a buffer of this base and width. GT4 turns the display on at the race's
+        // IN-531: only when something wrote this buffer as a buffer of this base and width. The game turns the display on at the race's
         // return to the menus (480i) some VBlanks before it draws: that memory holds textures of other widths and old depth, which
         // the reference renderer does not show. It reads black, like a circuit with no source. COREGS_CORE2_DISPLAY_MEMORY=1 shows it.
         const bool showAnyMemory = showAnyDisplayMemory_;

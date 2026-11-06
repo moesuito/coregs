@@ -233,7 +233,7 @@ using Translation = BatchTranslation;
 // same sign) widened by one texel for rounding and bilinear neighbours, then put through the wrap mode: CLAMP
 // clamps to the texture, REGION_CLAMP to its region; REPEAT that leaves the texture and REGION_REPEAT give the whole
 // texture. A texture taken from a resident target only needs this rectangle loaded, not the whole power-of-two
-// texture (GT4's full-screen passes sample a 640 x 448 frame through a 1024 x 512 texture).
+// texture (the game's full-screen passes sample a 640 x 448 frame through a 1024 x 512 texture).
 PixelRect TextureFootprint(const Batch& batch, const TextureUnit& t, uint32_t width, uint32_t height) {
     const PixelRect whole{0, 0, static_cast<int32_t>(width) - 1, static_cast<int32_t>(height) - 1};
     if (batch.vertices.empty()) return whole;
@@ -555,7 +555,7 @@ void Translate(const Batch& batch, const memory::LocalMemory& local, const clut:
         // IN-397: the slack belongs to the SCALED pass only. The front end's rectangle is the exact 1x coverage (the
         // first and last pixel inside [min, max)), so the 1x draw and the drawn/dirty rectangle keep it; at scale the
         // 06.3 shift puts up to half a native pixel of real sub-pixel coverage past it, which the scaled scissor must
-        // not cut. IN-391 widened the drawn rectangle too: GT4's per-frame colour filter draws exact 32-row pages, the
+        // not cut. IN-391 widened the drawn rectangle too: the game's per-frame colour filter draws exact 32-row pages, the
         // extra row reached the next page row, the temporary page overlapped the frame and every race frame lost its
         // scaled image (the owner's 1x races from candidate 276). COREGS_HW_PRIM_SLACK=<n> sets the scaled slack (A/B).
         static const int32_t slack =
@@ -980,7 +980,7 @@ public:
     void store(const TextureKey& key, const memory::BufferView& view, const std::vector<uint32_t>& texels) override {
         if (!textureCacheEnabled_) return;
         if (textures_.size() >= kTextureCacheEntries) {
-            // Least recently used entry goes (the cache is small: GT4 menus reuse a few dozen textures).
+            // Least recently used entry goes (the cache is small: the game menus reuse a few dozen textures).
             auto oldest = textures_.begin();
             for (auto it = textures_.begin(); it != textures_.end(); ++it) {
                 if (it->second.lastUse < oldest->second.lastUse) oldest = it;
@@ -1070,7 +1070,7 @@ public:
     }
 
     // IN-351: the upload is written into the GLM by a kernel instead of into the shadow memory pixel by pixel on
-    // the CPU (GT4 streams megabytes of textures per race frame). The stale pages of the destination are uploaded
+    // the CPU (the game streams megabytes of textures per race frame). The stale pages of the destination are uploaded
     // to the GLM first, then the kernel writes the transfer's pixels, and the pages become GLM-owned: GPU users
     // read them there; a CPU user downloads them first. Only rectangles whose pixels have distinct addresses go
     // this way (no row wrap inside the buffer width, no coordinate wrap); others take the CPU path.
@@ -1201,7 +1201,7 @@ public:
         PixelRect drawn;   // empty = nothing newer than the shadow memory
         uint64_t lastUse = 0;
         // IN-350: the GLM already holds this slot's drawn pixels when no draw and no GLM page upload under them
-        // happened since its last swizzle (GT4 draws palettes into a target and loads CLUTs from it many times).
+        // happened since its last swizzle (the game draws palettes into a target and loads CLUTs from it many times).
         uint64_t drawSequence = 0;        // bumped by every draw into the slot
         uint64_t glmSwizzledDraw = ~0ull; // drawSequence at the last swizzle (~0: none)
         uint64_t glmSwizzledClock = 0;    // glmUploadClock_ at the last swizzle
@@ -1263,7 +1263,7 @@ public:
         slot.drawn = PixelRect{};
     }
 
-    // IN-377: views the display circuits showed in the last few VBlanks. GT4 double-buffers its race frame: the
+    // IN-377: views the display circuits showed in the last few VBlanks. The game double-buffers its race frame: the
     // buffer it shows next is finished one frame before, and the game then reuses part of that memory as a
     // read-only depth buffer, which drops its colour slot (and its scaled image) before the VBlank shows it.
     void NoteDisplayedView(const memory::BufferView& view) {
@@ -1495,7 +1495,7 @@ public:
     // there (swizzled into the GLM at its own layout) instead of being written back. The GLM copy of the rest of
     // such a page is current (its stale pages were uploaded before the swizzle), so the GLM holds the whole page.
     // GPU users (slot loads, GLM texture decodes, GPU CLUT loads) read it from the GLM directly; any CPU reader or
-    // writer of the shadow memory downloads it first (Materialise). This is GT4's buffer reuse: the same memory
+    // writer of the shadow memory downloads it first (Materialise). This is the game's buffer reuse: the same memory
     // drawn under other widths and formats (a 640-wide depth buffer, then a 64-wide one at the same base; a
     // 128-wide target inside the frame buffer) moves between slots on the GPU.
     bool GlmParkingActive() const { return cacheMode_ && glmEnabled_ && glmParking_; }
@@ -1729,7 +1729,7 @@ public:
             }
         }
         // IN-373: at an internal scale > 1 a colour target the display circuits show is evicted last, so the
-        // presentation finds its scaled image (GT4 keeps the shown buffer of its double buffer untouched while it
+        // presentation finds its scaled image (the game keeps the shown buffer of its double buffer untouched while it
         // draws the other one and many small targets). At 1x the order is the plain LRU of IN-344.
         const bool keepDisplayed = !depth && gpu_.Scale() > 1;
         for (int pass = 0; pass < 2 && !oldest; ++pass) {
@@ -1820,7 +1820,7 @@ public:
         StageTimer timer(counters.cacheLoadUs);
         const PixelRect old = slot.loaded;
         const PixelRect wanted = old.Empty() ? rect : UnionRects(old, rect);
-        // IN-398 (SCALE-ONLY-PLAN S1): another slot holding this memory under an interchangeable view (GT4 reads its
+        // IN-398 (SCALE-ONLY-PLAN S1): another slot holding this memory under an interchangeable view (the game reads its
         // race frame as CT32 and CT24 in turn). The overlap pass below writes it back and drops it, but its images
         // stay until reused, so the refreshes of this load keep its scaled blocks wherever the words still match.
         static const bool carryEnabled = std::getenv("COREGS_HW_SCALED_CARRY") == nullptr ||
@@ -1878,7 +1878,7 @@ public:
 
     // The rectangle to load for a batch: its own rectangle, widened to the context's scissor when that is a
     // plausible buffer (inside the buffer width, at most 512 lines) and the widened area holds no other resident
-    // target (IN-350: widening into a neighbour, such as GT4's depth buffer right after its colour buffer, would
+    // target (IN-350: widening into a neighbour, such as the game's depth buffer right after its colour buffer, would
     // drop that neighbour on every switch). Later batches of the same target then rarely need to grow it.
     PixelRect LoadRectFor(const Translation& t, const memory::BufferView& view, const ResidentSlot& slot) const {
         const int32_t bufferWidth = static_cast<int32_t>(std::max<uint32_t>(view.bufferWidth, 1u) * 64u);
@@ -2015,7 +2015,7 @@ public:
     bool GpuClutActive() const { return cacheMode_ && glmEnabled_ && gpuClutEnabled_; }
 
     void OnClutLoaded(const clut::Tex0Write& write, bool deferrable = true) {
-        // IN-383: the strips of GT4's tone sequence are collected with the palette load that precedes each of them, so
+        // IN-383: the strips of the game's tone sequence are collected with the palette load that precedes each of them, so
         // a page that has to run its batches afterwards can repeat the load instead of using a later palette.
         toneClut_ = write;
         toneClutValid_ = true;
@@ -2175,8 +2175,8 @@ public:
         return true;
     }
 
-    // ---- IN-379: GT4's RGB tone curve at scale (chapter 09.4 variant A, policy 2) -------------------------
-    // Every race frame, GT4 reads its 32-bit frame buffer page by page through 8-bit (T8) views and a ramp CLUT into
+    // ---- IN-379: the game's RGB tone curve at scale (chapter 09.4 variant A, policy 2) -------------------------
+    // Every race frame, the game reads its 32-bit frame buffer page by page through 8-bit (T8) views and a ramp CLUT into
     // a temporary page and writes the result back, through 8-bit views again, into the same memory as a CT24
     // target. All of that runs at 1x through the GLM (exact), which left the frame's scaled image as the 1x result
     // blown up (owner test 7). The sequence starts with a T8 batch that reads a resident 32-bit colour target: that
@@ -2228,7 +2228,7 @@ public:
             toneRun_.firstUse = slotUses_;
             counters.toneRuns++;
             // IN-382 (owner performance requirement): the sequence's draws are not repeated at scale. About 280 of
-            // GT4's ~320 runs per race frame are this sequence (140 pages x temporary page and write-back), and its
+            // The game's ~320 runs per race frame are this sequence (140 pages x temporary page and write-back), and its
             // scaled result is rebuilt by the carry anyway; slots it touched are refreshed at its end.
             gpu_.PauseScaled(true);
             return;
@@ -2316,7 +2316,7 @@ public:
         toneRun_.active = false;
         gpu_.PauseScaled(false);  // IN-382
         if (failed_) return;
-        // IN-382: every other slot the paused sequence used gets its scaled image back from its 1x words (GT4: the
+        // IN-382: every other slot the paused sequence used gets its scaled image back from its 1x words (the game: the
         // temporary page), so no scaled image is left stale.
         for (const ResidentSlot& used : slots_) {
             if (!used.hasIdentity || used.loaded.Empty() || used.lastUse <= toneRun_.firstUse) continue;
@@ -2332,8 +2332,8 @@ public:
                 return;
             }
         }
-        // The result is in the same memory, maybe under another 32-bit view (GT4 writes it back as CT24); the next
-        // reader (GT4: the CT32 texture of the CT16 display conversion) finds the source view resident at scale.
+        // The result is in the same memory, maybe under another 32-bit view (the game writes it back as CT24); the next
+        // reader (the game: the CT32 texture of the CT16 display conversion) finds the source view resident at scale.
         ResidentSlot& slot = Acquire(false, toneRun_.source);
         Load(slot, toneRun_.saved);
         if (failed_ || !Contains(slot.loaded, toneRun_.saved)) return;
@@ -2872,7 +2872,7 @@ public:
             StageTimer timer(frameTimings_.executeUs);
             bool done = false;
             if (cacheMode_ && cpuSmallSprites_ && SmallUntexturedSprites(batch, t)) {
-                // IN-348: small flat sprite batches (GT4 draws its palettes this way, chapter 07.8) are drawn
+                // IN-348: small flat sprite batches (the game draws its palettes this way, chapter 07.8) are drawn
                 // by the CPU reference straight into the shadow memory, which is exact for untextured sprites
                 // (the GPU path draws the same words). A CLUT load from them then needs no GPU write-back.
                 ReasonScope scope(writebackReason_, WritebackReason::CpuSprite);
@@ -2911,7 +2911,7 @@ public:
             Fail("GPU drawer is not initialised");
             return;
         }
-        // IN-383: a strip of GT4's tone sequence is collected; every other batch writes the collected page first.
+        // IN-383: a strip of the game's tone sequence is collected; every other batch writes the collected page first.
         if (TryDeferToneStrip(batch)) {
             if (observer_) observer_(batch, BatchTranslation{});  // the trace still lists every batch
             if (tonePage_.strips == 8) FlushToneStrips();
@@ -3232,7 +3232,7 @@ std::size_t Renderer::ReadFifo(void* destination, std::size_t byteCount) {
     if (s.memory_.LocalToHostPending()) {
         // IN-357: the first FIFO access takes the transfer's data from the shadow memory; only its source
         // rectangle must be current there (draws since TRXDIR included). It used to write back every resident
-        // target on every FIFO read (GT4's lens flare: about 7 per frame, each a submission and a wait).
+        // target on every FIFO read (the game's lens flare: about 7 per frame, each a submission and a wait).
         ReasonScope scope(s.writebackReason_, WritebackReason::Transfer);
         s.CoherentForRead(s.pendingReadSpan_);
     }
@@ -3285,7 +3285,7 @@ void Renderer::Flush() {
     ++s.timedFrames_;
     ++s.vblanks_;  // the next compose computes this VBlank's display layout (13.2)
     // Diagnostics: COREGS_HW_TRACE_FROM_VBLANK=N keeps the draw and scaled traces silent before VBlank N, so a trace of a
-    // late scene (the GT Mode map at 9600) does not slow the whole run down.
+    // late scene (a menu map at 9600) does not slow the whole run down.
     static const long traceFrom = [] {
         const char* text = std::getenv("COREGS_HW_TRACE_FROM_VBLANK");
         return text ? std::atol(text) : 0L;
@@ -3333,7 +3333,7 @@ const OutputSettings& Renderer::GetOutputSettings() const { return impl_->settin
 namespace {
 
 // Row field of 13.3/13.4 (0 = the field on even output rows, unshifted) for a display field as the VSYNC
-// record carries it (CSR.FIELD, 1 = odd). IN-339 (Confirmed on GT4 menus by measurement, against the IN-35
+// record carries it (CSR.FIELD, 1 = odd). IN-339 (Confirmed on the game menus by measurement, against the IN-35
 // reading): CSR.FIELD = 1 is the upper (even-row) field, CSR.FIELD = 0 the lower one.
 int RowFieldOfDisplayField(bool csrFieldOdd) { return csrFieldOdd ? 0 : 1; }
 
@@ -3479,7 +3479,7 @@ void Renderer::ComposeFrame(FrameOutput& out, ComposeKind kind) {
                                 : s.settings_.deinterlace;
             }
             // IN-339: the display field of a frame (VSYNC field = CSR.FIELD, 1 = odd) maps to the LOWER row
-            // phase when it is 0 and to the upper one when it is 1: GT4 draws its CSR.FIELD = 1 frames half a
+            // phase when it is 0 and to the upper one when it is 1: the game draws its CSR.FIELD = 1 frames half a
             // line higher, so with the IN-35 reading (field 1 shifted down) every woven menu line landed two
             // rows from its partner. `_bff` still inverts the result.
             const int vblankField = RowFieldOfDisplayField(displayField);

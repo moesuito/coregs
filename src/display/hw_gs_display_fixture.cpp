@@ -74,7 +74,7 @@ std::uint64_t display_word(std::uint64_t dx, std::uint64_t dy, std::uint64_t mag
            ((dw & 0xFFFu) << 32) | ((dh & 0x7FFu) << 44);
 }
 
-// NTSC 480i as GT4 menus run it: CMOD 2, SMODE2 INT = 1 and FFMD = 1.
+// NTSC 480i as the game menus run it: CMOD 2, SMODE2 INT = 1 and FFMD = 1.
 DisplayRegisters ntsc_registers() {
     DisplayRegisters regs;
     regs.smode1 = smode1_word(2, 0);
@@ -450,7 +450,7 @@ void test_interlace_phase() {
     CHECK_EQ(field_from_csr(true), 1);
     CHECK_EQ(field_from_csr(false), 0);
 
-    // The 448-line image of GT4's 480i: the field phase flips which rows the field occupies.
+    // The 448-line image of the game's 480i: the field phase flips which rows the field occupies.
     DisplayRegisters regs = ntsc_registers();
     regs.circuits[0] = CircuitRegisters{dispfb_word(0, 10, 0, 0, 0), display_word(0, 0, 3, 0, 2559, 447)};
     std::array<std::uint32_t, 2> previous{0, 0};
@@ -537,7 +537,7 @@ void test_deinterlace_adaptive() {
     CHECK_EQ(out.at(1, 1).r, 0);    // static column: previous line kept
     CHECK(out.at(0, 2) == (Rgba8{255, 255, 255, 255}));  // current-field rows pass through
 
-    // Static sharp detail in field-rendered content (IN-337, GT4 menus): each field holds its own lines,
+    // Static sharp detail in field-rendered content (IN-337, the game menus): each field holds its own lines,
     // line-doubled into the merge and the odd field shifted down one row (13.3 step 3). Every frame line
     // has its own value, so no line is the average of its neighbours. From the third field on (each parity
     // has a predecessor) the output must be the progressive picture and must not change between fields.
@@ -578,7 +578,7 @@ void test_deinterlace_adaptive() {
     out = moving.process(after, 1, DeinterlaceMode::Adaptive, false, 1);
     CHECK_EQ(out.at(1, 2).r, 0);  // field 1 writes odd rows; row 2 is missing and bobbed from 1 and 3
 
-    // IN-396 (the owner's combed GT Mode ticker): the current field and the field two back agree, but the field that
+    // IN-396 (a combed scrolling menu ticker): the current field and the field two back agree, but the field that
     // would be woven in (one back) changed against its own previous sample (three back). The reference treats that
     // as motion and interpolates; weaving it put a second position of the text on every other row.
     Deinterlacer ticker;

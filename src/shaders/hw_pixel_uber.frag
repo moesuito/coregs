@@ -202,7 +202,7 @@ uint g_mip_aniso = 0u;    // IN-434: log2 of the most anisotropic samples (0: of
 vec2 g_tex_dx = vec2(0.0), g_tex_dy = vec2(0.0);  // IN-434: texel coordinate per screen pixel in x and y
 uint g_tex_scale = 1u;  // PUSH_WORD without the filter/dither bits
 // IN-427 (CORE2): bit 24 says the texture is a target sampled at binding 4, whatever the scale. At 1x the scale alone
-// (1) also meant "the 1x texel atlas", so core 2 read the atlas instead of the target and GT4's scene copies came out
+// (1) also meant "the 1x texel atlas", so core 2 read the atlas instead of the target and the game's scene copies came out
 // black (only the HUD showed).
 bool g_texture_from_target = false;
 // IN-428 (CORE2, C1): bit 23 says tex_origin_x holds the mip parameters of a memory texture whose levels 1..MXL sit
@@ -214,7 +214,7 @@ uint g_mip_mmin = 0u;
 bool g_mip_lcm = false;
 uint g_mip_l = 0u;
 int g_mip_k = 0;
-// IN-384 follow-up (Q-GSDX-COMPARISON section 2): the reference indexes the dither matrix with the raw fragment
+// The reference indexes the dither matrix with the raw fragment
 // coordinate (one cell = 4x4 OUTPUT pixels) and only offers the per-native-pixel pattern as an option; ours always
 // divided by the scale, so one cell covered s x s output pixels (24x24 at 6x, doubled vertically on a 480i field:
 // the owner's 6 x 12 lattice). Fine is the default at scale > 1; native stays available for fidelity checks.
@@ -547,7 +547,7 @@ ivec4 fogged(ivec4 colour) {
 
 void main() {
     ivec2 pixel = ivec2(floor(gl_FragCoord.xy));
-    // IN-530: SCANMSK (bits 20-21 of the push word): 2 leaves out even rows, 3 odd rows. GT4 draws the time trial ghost this way.
+    // IN-530: SCANMSK (bits 20-21 of the push word): 2 leaves out even rows, 3 odd rows. The game draws the time trial ghost this way.
     // The rows are output rows, as on the reference renderer at scale: native rows make the ghost look shredded.
     const uint scan_mask = (PUSH_WORD >> 20) & 3u;
     if (scan_mask >= 2u && (uint(pixel.y) & 1u) == (scan_mask & 1u)) discard;

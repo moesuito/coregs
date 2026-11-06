@@ -258,7 +258,7 @@ struct GpuDrawer::Impl {
   // Default NEAREST: the 06.7 gate (box downsample against 1x, 25 dB on the synthetic capture) prefers the exact
   // block; COREGS_HW_SCALED_REFRESH=linear turns the smoothing on for the owner's A/B.
   bool scaledRefreshLinear = false;
-  // IN-388: native alignment of the scaled pass (the reference's GT4 half-pixel mode). A primitive edge at a GS integer
+  // IN-388: native alignment of the scaled pass (the reference's the game half-pixel mode). A primitive edge at a GS integer
   // coordinate lands at the CENTRE of a native pixel's s x s block with the 06.3 shift, so a quad that covers one native
   // pixel at 1x covers half of two blocks at scale and paints a half-native-pixel sliver at every edge (the owner's thin
   // white lines at 6x). Snapping the vertex to the block grid makes each native pixel all-or-nothing, as at 1x.
@@ -266,7 +266,7 @@ struct GpuDrawer::Impl {
   // IN-392: at scale the fragment's Z comes from the rasteriser's position depth (Z * 2^-32 in gl_Position.z), floored
   // to an integer, as the reference does; the float varying it replaces rounds differently at the non-centred sample
   // points of a scaled pixel, so a second pass over the same vertices failed its GEQUAL tie at scattered sub-pixels
-  // (the dark notches in the white rings of the GT Mode event icons and on the wheels). COREGS_HW_SCALED_DEPTH=varying
+  // (the dark notches in white rings and on wheels). COREGS_HW_SCALED_DEPTH=varying
   // restores the varying for an A/B. 1x draws always use the varying (their words are the exact-memory authority).
   bool scaledDepthFromPosition = true;
   // Diagnostics only (COREGS_HW_SCALED_DIAG): 0x08000000 skips a KEEP alpha test, 0x04000000 replaces the texel by a
@@ -840,7 +840,7 @@ struct GpuDrawer::Impl {
 
   // IN-358: the recording is submitted every kChunksPerSubmission chunks (with double buffering), so the GPU
   // draws the frame while the CPU records the rest of it. Without this nothing reached the GPU before the VBlank
-  // or a readback, and a readback in mid-frame (GT4's lens flare) waited for the GPU to draw the whole scene so far.
+  // or a readback, and a readback in mid-frame (the game's lens flare) waited for the GPU to draw the whole scene so far.
   static constexpr std::uint32_t kChunksPerSubmission = 64;
   std::uint32_t chunksSinceSubmission = 0;
   std::uint32_t chunksPerSubmission = kChunksPerSubmission;  // 0 = only at VBlank, ring full and readbacks
@@ -3807,7 +3807,7 @@ void GpuDrawer::SetScale(std::uint32_t scale, float scaleOffset) {
   const char *refresh = std::getenv("COREGS_HW_SCALED_REFRESH");
   impl_->scaledRefreshLinear = refresh != nullptr && std::strcmp(refresh, "linear") == 0;
   const char *snap = std::getenv("COREGS_HW_SCALED_SNAP");
-  // IN-388: default OFF. Measured on the GT Mode dialog at 6x against the 1x presentation of the same VBlank: the snap
+  // IN-388: default OFF. Measured on a menu dialog at 6x against the 1x presentation of the same VBlank: the snap
   // halves the strongest sliver (23.5 -> 11.9 levels) but splits it into two, shifts the whole picture by half a native
   // pixel and costs 1.5 dB of box PSNR (23.06 against 24.52), so it is not the fix; it stays as a diagnostic switch.
   impl_->scaledSnap = snap != nullptr && std::strcmp(snap, "native") == 0;

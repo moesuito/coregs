@@ -269,7 +269,7 @@ struct Gpu::Impl {
   VkFence fence = VK_NULL_HANDLE;
   bool recording = false;
   // IN-410: the recording is submitted every `submitEvery` draw batches, so the GPU draws while the CPU records the
-  // rest of the frame and a readback in mid-frame (GT4's flare reads) waits only for the work after the last
+  // rest of the frame and a readback in mid-frame (the game's flare reads) waits only for the work after the last
   // submission. COREGS_CORE2_SUBMIT_EVERY=<batches>, 0 = only when the CPU needs a result or at the end of the frame.
   // S4: 32 since more submissions can be in flight (was 96 with two slots). TASK-134: 64 on a discrete GPU, set at Init (George V
   // Paris lap on the RX 9060 XT: GS thread CPU -5% at 1x and -4% at 3x, frame -3% at 1x and the same at 3x; 128 made the 3x
@@ -281,7 +281,7 @@ struct Gpu::Impl {
   std::uint32_t batchesSinceSubmit = 0;
   // TASK-178 (O1 of docs/hw-renderer-spec/STUDY-FRAME-DOWNLOAD-COST.md): a waited submission (a readback: Reduce,
   // ReduceMany, ReadClut) drains the queue, and the GPU then idles until the next submission, which came `submitEvery`
-  // batches later or at the VBlank flush (the flare and glare draws right after GT4's flare read). With
+  // batches later or at the VBlank flush (the flare and glare draws right after the game's flare read). With
   // COREGS_CORE2_SUBMIT_AFTER_WAIT=<K> the first mid-frame submission after a waited one comes after K batches; the cadence is
   // `submitEvery` again after it. Submission boundaries never change what is drawn. 0 = off (A/B); unset: decided at Init.
   std::uint32_t submitAfterWait = [] {
@@ -432,8 +432,8 @@ struct Gpu::Impl {
   std::vector<SpecKey> specKnown;  // specMutex: every variant compiled or read from the file
   bool specKnownChanged = false;   // specMutex
   std::size_t specKnownFromFile = 0;
-  // IN-494: COREGS_CORE2_CLEAR_WHOLE=0 draws GT4's whole-target clears, =1 clears only what keeps every byte, =2 also a Z24
-  // depth word with its top byte zero. The GS keeps that byte and nothing in GT4 shows it (frames identical, and the EE
+  // IN-494: COREGS_CORE2_CLEAR_WHOLE=0 draws the game's whole-target clears, =1 clears only what keeps every byte, =2 also a Z24
+  // depth word with its top byte zero. The GS keeps that byte and nothing in the game shows it (frames identical, and the EE
   // never reads depth), but it is not the exact memory: unset, =2 at a scale above 1x and on integrated GPUs, else =1.
   const char *clearWholeText = std::getenv("COREGS_CORE2_CLEAR_WHOLE");
   const int clearWholeSetting = clearWholeText ? std::atoi(clearWholeText) : -1;
@@ -628,7 +628,7 @@ struct Gpu::Impl {
   }
 
   // S2: device memory for images taken from 64 MiB blocks instead of one allocation per image. vkAllocateMemory is a
-  // kernel call: at GT4's race start core 2 created 40-160 images per VBlank (texture decodes of new textures), which
+  // kernel call: at the game's race start core 2 created 40-160 images per VBlank (texture decodes of new textures), which
   // made 20-65 ms spikes. Images over 16 MiB keep an allocation of their own; empty blocks are kept for reuse.
   // COREGS_CORE2_IMAGE_BLOCKS=0 gives every image its own allocation (A/B).
   static constexpr VkDeviceSize kImageBlockBytes = static_cast<VkDeviceSize>(64) << 20;
@@ -850,7 +850,7 @@ struct Gpu::Impl {
   }
 
   // Spec 8.8: the images a batch samples instead of the target it draws into, one per image size, kept from batch to
-  // batch (GT4 draws its glow and luminance passes into the same few effect buffers every frame); the least recently
+  // batch (the game draws its glow and luminance passes into the same few effect buffers every frame); the least recently
   // used one goes when a fifth size is needed. Only the copied rectangle of one is ever sampled.
   struct SelfCopy {
     Image image;
@@ -990,7 +990,7 @@ struct Gpu::Impl {
 
   // IN-496: the key's ROP slot for a batch of an interlock GPU drawn with the plain module: its primitives share no pixel,
   // so they need no order among them, and a read-modify-write of one image costs half on the HD 620 without the interlock
-  // (GT4's full-screen colour passes). A wait before and after keeps it in order with the other batches.
+  // (the game's full-screen colour passes). A wait before and after keeps it in order with the other batches.
   static constexpr std::uint32_t kPlainWord = 0x80000000u;
   // Integrated GPUs only: on the RX 9060 XT at 12x the waits cost more than the interlock (GPU busy 23.7 to 24.7 ms).
   // COREGS_CORE2_PLAIN_DISJOINT=0 or 1 overrides that (A/B).
@@ -1041,7 +1041,7 @@ struct Gpu::Impl {
     const bool whole16 = format == 2u;
     if (whole16 && (!ct16Allowed || f[g::BlendOn] != 0 || (f[g::Fbmsk] & 0x80F8F8F8u) != 0)) return 0;
     std::uint32_t blendIndex = 0;
-    // IN-494: with every lane kept the blend has no effect (GT4 writes depth through such a textured pass).
+    // IN-494: with every lane kept the blend has no effect (the game writes depth through such a textured pass).
     if (f[g::BlendOn] != 0 && (f[g::Fbmsk] & (format == 0u ? 0xFFFFFFFFu : 0x00FFFFFFu)) != (format == 0u ? 0xFFFFFFFFu : 0x00FFFFFFu)) {
       // No PABE, no wrapping past 255, a factor the shader can give (not Ad, which the GPU would read over 255).
       if (!allowBlend || f[g::Pabe] != 0 || f[g::Colclamp] == 0 || f[g::BlendC] == 1u) return 0;
@@ -1503,7 +1503,7 @@ struct Gpu::Impl {
   void spec_worker() {
 #ifdef _WIN32
     // IN-476: a variant can take seconds on some drivers (2.2 s on the HD 620); on two cores it must not take time from
-    // the game's own threads. The game draws with the uber pipeline meanwhile.
+    // The game's own threads. The game draws with the uber pipeline meanwhile.
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
 #endif
     for (;;) {
@@ -2501,8 +2501,11 @@ bool Gpu::EffectPassSkipped() const { return impl_->profile.skip_effect_pass; }
 
 void Gpu::SetProfile(const coregs::GameProfile &profile) {
   impl_->profile = profile;
-  impl_->knownVariants.assign(profile.known_shader_variants,
-                              profile.known_shader_variants + profile.known_shader_variant_words);
+  impl_->knownVariants.clear();
+  if (profile.known_shader_variants != nullptr && profile.known_shader_variant_words != 0) {
+    impl_->knownVariants.assign(profile.known_shader_variants,
+                                profile.known_shader_variants + profile.known_shader_variant_words);
+  }
 }
 
 bool Gpu::PrepareShaders(const ShaderProgress &progress, std::string &error) {
@@ -3407,7 +3410,7 @@ bool Gpu::Draw(const DrawBatch &batch, std::string &error) {
       if (!eligible) break;
       if (!repeated) rects.push_back(r);
     }
-    // IN-494: a fill of the whole target with one constant word per image is a clear of the image. GT4 clears its depth
+    // IN-494: a fill of the whole target with one constant word per image is a clear of the image. The game clears its depth
     // and colour this way several times per VBlank, in strips, some masked to the alpha lane (the rest of such a fill
     // goes on below without its depth) or only through the alpha test's fail path into the depth.
     if (eligible && s.clearWhole) {

@@ -595,7 +595,7 @@ Image Deinterlacer::adaptive(const Image& merged, int row_parity, double thresho
             // on the line above and the line below, and the field that would be woven in (one back) against the
             // older field of its parity (three back) on the line itself. IN-337's test of the current image's own
             // row y against two back was a second current-field test; it never noticed that the woven field had
-            // moved, so a scrolling text was woven from two positions (the owner's combed GT Mode ticker).
+            // moved, so a scrolling text was woven from two positions (a combed scrolling menu ticker).
             bool motion = previous_same == nullptr || older_other == nullptr || previous_other == nullptr;
             if (!motion) {
                 motion = channel_excess(up, previous_same->image.at(x, y - 1u), threshold_permille) > 0 ||

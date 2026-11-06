@@ -1528,7 +1528,7 @@ void TestClutCopyFree() {
 
 // IN-366: the fast paths (strip runs decoded at once, no candidate copy for non-drawing kicks, the flush decision
 // reused while nothing it reads changed) give exactly the generic path's batches, sync events, transfers and
-// counters. Streams: GT4-like strip tags (PACKED STQ, RGBA, XYZF2 with PRE triangle strip, fan or list; random ADC,
+// counters. Streams: the game-like strip tags (PACKED STQ, RGBA, XYZF2 with PRE triangle strip, fan or list; random ADC,
 // NLOOP 1-60) between A+D material changes that often repeat the current value, XYOFFSET, PRIM and scissor changes,
 // plus the generic fuzz packets; every stream is fed in random transfer splits (strip tags cut across transfers
 // take the generic path).

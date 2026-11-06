@@ -51,7 +51,7 @@ documented limit; **Not yet** = not implemented, with the workaround a host can 
 | Palettes drawn by the game into targets | Supported | Loaded on the GPU from the drawn target, no CPU readback. |
 | Palette segments (one T8 batch, several palettes) | Partial | A profile rule (GT4 example); experimental and off by default. |
 | Texture cache | Supported | Keyed by address, format, extent, TEXA and palette contents. |
-| Texture replacement packs | Supported | PNG images keyed by the game's texture key, pack folders, texture dumps. |
+| Texture replacement packs | Supported | PNG images keyed by the game's texture key; packs under `<root>/<serial>/textures`; texture dumps. |
 
 ## Render targets, readbacks and memory
 

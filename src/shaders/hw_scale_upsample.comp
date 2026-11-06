@@ -9,7 +9,7 @@
 // from the shadow memory or the GLM), the changed rectangle of the scaled image is refreshed from it here.
 // Draws reach the scaled image by being rasterised a second time at scale (IN-371), not through this kernel.
 //
-// IN-384 follow-up (Q-GSDX-COMPARISON section 6): the reference blits a 1x upload into a scaled target with
+// The reference blits a 1x upload into a scaled target with
 // BILINEAR by default (nearest is an option) and always bilinear for depth; nearest keeps the source's 6-pixel
 // steps visible on a flat gradient at 6x. `linear` (push word 5) selects bilinear for the colour slots; the depth
 // slots stay nearest because their words are compared, not shown.
@@ -65,7 +65,7 @@ void main() {
     uvec2 native = uvec2(pc.x0, pc.y0) + sub / pc.scale;
     uint word = imageLoad(native_words, ivec2(native)).x;
     ivec2 target = ivec2(uvec2(pc.x0, pc.y0) * pc.scale + sub);
-    // IN-398 (SCALE-ONLY-PLAN S1): GT4 reads its race frame as CT32 and CT24 in turn, and every view change reloaded
+    // IN-398 (SCALE-ONLY-PLAN S1): the game reads its race frame as CT32 and CT24 in turn, and every view change reloaded
     // the target from 1x words, so the picture showed 1x patches. Where the previous view's 1x word equals the
     // loaded one in the shared bits, its scaled block is still the right picture of that memory: keep it, with the
     // loaded word's own bits outside the shared mask (a 24-bit view's top byte).

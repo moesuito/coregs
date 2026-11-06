@@ -21,7 +21,7 @@
 //     and the woven row differs from them at least as much, else the woven row. The edge rows are always woven.
 //   6 adaptive, moving rows interpolated (IN-405, CORE2's default): as 5, but a moving pixel is always the average of
 //     the rows above and below. Rule 5 keeps the woven row where those two rows disagree, which on thin strokes moving
-//     fast (GT4's GT Mode ticker) weaves two text positions into a comb; the reference shows that text clean.
+//     fast (the game's fast menu ticker) weaves two text positions into a comb; the reference shows that text clean.
 
 #version 450
 

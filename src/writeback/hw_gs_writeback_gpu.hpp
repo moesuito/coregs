@@ -103,7 +103,7 @@ static_assert(Count <= 48, "GpuPixelState has 48 fields");
 // stored values of the 32-bit view (SLM readPixel), row-major with width = rect width.
 // Target slots (IN-344): GPU images that hold resident colour and depth targets. The last slot of each kind is
 // the write-back mode's scratch pair, so a write-back batch never disturbs a resident target.
-constexpr std::uint32_t kGpuColourSlots = 16;  // IN-400: GT4 uses many small targets per frame (was 6)
+constexpr std::uint32_t kGpuColourSlots = 16;  // IN-400: the game uses many small targets per frame (was 6)
 constexpr std::uint32_t kGpuDepthSlots = 8;     // IN-400 (was 3)
 constexpr std::uint32_t kGpuScratchColourSlot = kGpuColourSlots - 1;
 constexpr std::uint32_t kGpuScratchDepthSlot = kGpuDepthSlots - 1;
@@ -164,7 +164,7 @@ struct GpuChunk {
 // (kGpuScaledExtent - 1, kGpuScaledExtent - 1) of each slot; draws and loads outside it reach only the 1x words.
 constexpr std::int32_t kGpuScaledExtent = 1024;
 constexpr std::uint32_t kGpuMaxScale = 12;  // COREGS_HW_SCALE range (06.1; owner 2026-10-27: up to 12x, 8K)
-// Owner test 6 (IN-377): scaled copies of finished display buffers whose target slot was dropped (GT4 reuses the
+// Owner test 6 (IN-377): scaled copies of finished display buffers whose target slot was dropped (the game reuses the
 // memory of the buffer it shows next as a read-only depth buffer, which drops the colour slot one frame before the
 // buffer is displayed). Each shadow keeps the native rectangle (0, 0) to (kGpuScaledExtent - 1,
 // kGpuShadowRows - 1) at scale with its 1x words; the scaled compose reads it as source kGpuColourSlots + shadow
@@ -307,7 +307,7 @@ public:
     bool SaveScaledShadow(std::uint32_t slot, std::uint32_t shadow, std::int32_t x0, std::int32_t y0, std::int32_t x1,
                           std::int32_t y1, std::string &error);
     // IN-379 (09.4 variant A at scale): SaveToneSource copies colour slot `slot`'s scaled image and 1x words over the
-    // native rectangle (clipped to kGpuScaledExtent x kGpuShadowRows) before GT4's tone-curve sequence reads it at 1x;
+    // native rectangle (clipped to kGpuScaledExtent x kGpuShadowRows) before the game's tone-curve sequence reads it at 1x;
     // CarryTone then rebuilds colour slot `slot`'s scaled image over the rectangle from that copy through the per-
     // channel table that maps the saved 1x words to the slot's current 1x words (hw_scale_tone_carry.comp). Only the
     // scaled image changes.

@@ -36,7 +36,7 @@ struct FrontEndOptions {
     // reused while nothing it reads changed. Off: the generic per-register path (the fixture's oracle).
     bool fastPaths = true;
     // IN-403: a triangle or sprite whose bounding box holds no pixel centre draws nothing at 1x and is dropped. At an
-    // internal scale above 1 it covers samples between the centres (GT4's sub-pixel strip pieces, thin far-away
+    // internal scale above 1 it covers samples between the centres (the game's sub-pixel strip pieces, thin far-away
     // geometry), so a renderer at scale keeps it (the CPU reference culls it only at 1x).
     bool cullUncovered = true;
 };
@@ -50,7 +50,7 @@ public:
     virtual void OnBatch(Batch&& batch) = 0;
     // TASK-168b: asked for every batch the front end emits (after the chapter 02.6 discard), before the work only a
     // drawn batch needs (chapter 02.4 ST rounding, the vertex trace) and before OnBatch. True: the sink has applied the
-    // batch's whole effect itself (it draws nothing, e.g. core 2 dropping GT4's tone-run draws), so the batch is neither
+    // batch's whole effect itself (it draws nothing, e.g. core 2 dropping the game's tone-run draws), so the batch is neither
     // rounded, traced nor handed over; the front end still does its own bookkeeping (CLUT staleness, flush reason and
     // counts). The default never drops.
     virtual bool DropOnArrival(const Batch& batch) {

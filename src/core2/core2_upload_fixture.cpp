@@ -68,7 +68,7 @@ void CheckCase(std::uint64_t &state, Psm psm, std::uint32_t bp, std::uint32_t bw
 
 }  // namespace
 
-// --bench: the time of FastHostToLocal for GT4-like uploads (512 x 256 CT32 and T8, page aligned), for A/B runs of
+// --bench: the time of FastHostToLocal for the game-like uploads (512 x 256 CT32 and T8, page aligned), for A/B runs of
 // the swizzle switches (COREGS_CORE2_CT32_COLUMNS=0). Not part of the CTest pass/fail.
 int Bench() {
     std::vector<std::uint8_t> local(kLocalMemoryBytes, 0);
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
         ++cases;
     }
     {
-        // GT4 on George V Paris: the Z32 target at BP 11232, BW 4, drawn 192 x 256, holds pages 351-381 without 354, 358,
+        // The game on George V Paris: the Z32 target at BP 11232, BW 4, drawn 192 x 256, holds pages 351-381 without 354, 358,
         // ... 378; the streamed CT32 texture at BP 12224, BW 1, starts right after, at page 382. The whole target has 382.
         const BufferView depth{11232, 4, Psm::Z32}, stream{12224, 1, Psm::Ct32};
         PageSet drawn, whole, written;
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
         if (!answered || drawn.count() != 24 || !drawn[351] || !drawn[381] || drawn[354] || whole.count() != 32 ||
             written.count() != 45 || !written[382] || !written[426] || (drawn & written).any() || !(whole & written)[382]) {
             ++failures;
-            std::fprintf(stderr, "FAIL: PagesOfRect on GT4's target and stream\n");
+            std::fprintf(stderr, "FAIL: PagesOfRect on the game's target and stream\n");
         }
         // The end of memory wraps: 2 pages per row from page 511.
         PageSet wrapped;
@@ -226,12 +226,12 @@ int main(int argc, char **argv) {
             ++failures;
             std::fprintf(stderr, "FAIL: PagesOfRect ignores a format's page size\n");
         }
-        // GT4's small textures at a base inside page 382: only that page, and so none of the drawn pages.
+        // The game's small textures at a base inside page 382: only that page, and so none of the drawn pages.
         PageSet small;
         ++cases;
         if (!PagesOfRect(BufferView{12232, 1, Psm::Ct32}, 0, 0, 7, 7, small) || small.count() != 1 || !small[382] || (drawn & small).any()) {
             ++failures;
-            std::fprintf(stderr, "FAIL: PagesOfRect on GT4's small texture inside page 382\n");
+            std::fprintf(stderr, "FAIL: PagesOfRect on the game's small texture inside page 382\n");
         }
         // What it must refuse: too many block cells from a base inside a page, a width of half a page, past the width, past 2048.
         PageSet refused;

@@ -5,7 +5,7 @@
 //
 // The same load as hw_glm_clut.comp (clut::ClutUnit::Copy: CSM1 positions, CSM2 TEXCLUT row, CT32 groups from CSA,
 // CT16 entries at 16 * CSA), into the GPU copy of the CLUT buffer, but each entry is read where its newest value
-// lives: in a 32-bit colour target the game drew (GT4 draws and filters its palettes on the GPU and loads a CLUT from
+// lives: in a 32-bit colour target the game drew (the game draws and filters its palettes on the GPU and loads a CLUT from
 // them right away) or, outside that target's drawn and valid area, in the GLM. A target pixel is taken at its native
 // centre, as the readback (core2_reduce.comp) takes it, so the palette equals the one a readback would have loaded.
 // The target's pixel of a GS memory word comes from the inverse of the CT32 in-page layout (one entry per word of a

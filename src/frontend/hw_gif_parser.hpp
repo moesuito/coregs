@@ -55,7 +55,7 @@ public:
     virtual void ImageQwords(uint32_t path, const Qword* qwords, size_t count) {
         for (size_t i = 0; i < count; ++i) ImageQword(path, qwords[i]);
     }
-    // IN-366: the vertices of a PACKED STQ, RGBA, XYZF2 run (GT4's VU1 strip shape), decoded by the parser. Same
+    // IN-366: the vertices of a PACKED STQ, RGBA, XYZF2 run (the game's VU1 strip shape), decoded by the parser. Same
     // effect as WriteRegister(ST), WriteRegister(RGBAQ) and Kick for each vertex in order.
     struct StripVertex {
         uint64_t st = 0;
