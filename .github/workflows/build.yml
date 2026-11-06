@@ -90,6 +90,8 @@ jobs:
         run: cmake --build build
 
       - name: Test
-        env:
-          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
-        run: ctest --test-dir build --output-on-failure -j 4
+        run: |
+          # Lavapipe is the only driver on a runner without a GPU, and the loader finds it in the system
+          # ICD directory; list what was installed so a missing driver is visible in the log.
+          ls -l /usr/share/vulkan/icd.d/ || true
+          ctest --test-dir build --output-on-failure -j 4
