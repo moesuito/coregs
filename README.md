@@ -34,7 +34,7 @@ stable interface:
 - Exact blend modes (the cases a GPU cannot express natively are evaluated in the pixel shader),
   alpha test, DATE, fog, dithering, TFX, channel write masks, SCANMSK.
 - CLUT: CSM1/CSM2, TEXCLUT, palettes drawn by the game into targets and read back on the GPU.
-- Texture cache, mip levels, texture replacement packs (PNG, keys, dumps).
+- Texture cache, mip levels, texture replacement packs (PNG/DDS keys, dumps) compatible with the packs players already have.
 - Readbacks with an explicit synchronisation contract (LOCAL→HOST transfers, FIFO depth).
 - Render targets with dirty tracking, readbacks at 1x, and a GPU memory mirror (GLM) for textures.
 - Internal resolution 1x–12x (device ceiling), FSR1/Lanczos presentation upscale, FXAA, shadeboost,
@@ -42,13 +42,22 @@ stable interface:
 - Presentation to a host window: FIFO/mailbox/immediate, 16:9 or display-aspect fill, paced presenter.
 - A game profile mechanism for content-aware rules, with Gran Turismo 4 as the worked example.
 
+### Texture packs
+
+CoreGS reads the de-facto PS2 texture-pack layout, so the packs players already use work unchanged.
+Point `COREGS_HW_TEXTURES` at the `Textures` folder (GT4Recomp uses
+`Documents\Gran Turismo 4\Textures`) and drop a pack into it or into any subfolder: every loose
+`.png` or `.dds` with a replacement key in its name is picked up. `COREGS_HW_DUMP_TEXTURES=1` writes
+textures with that same naming, ready to be edited and dropped back in. The exact names are in
+[docs/FEATURES.md](docs/FEATURES.md#texture-packs).
+
 Detailed support matrix and GPU requirements: [docs/FEATURES.md](docs/FEATURES.md).
 
 ## Quick start
 
 Requirements: CMake 3.24+, a C++20 compiler, the Vulkan SDK (headers, loader and
 `glslangValidator`). Windows is the primary platform; Linux builds the renderer and the fixtures
-(the windowed front end is Windows-only for now).
+(the windowed front end is Windows-only for now). **Linux CI: added, first run pending.**
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release

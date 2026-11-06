@@ -51,7 +51,36 @@ documented limit; **Not yet** = not implemented, with the workaround a host can 
 | Palettes drawn by the game into targets | Supported | Loaded on the GPU from the drawn target, no CPU readback. |
 | Palette segments (one T8 batch, several palettes) | Partial | A profile rule (GT4 example); experimental and off by default. |
 | Texture cache | Supported | Keyed by address, format, extent, TEXA and palette contents. |
-| Texture replacement packs | Supported | PNG images keyed by the game's texture key; packs under `<root>/<serial>/textures`; texture dumps. |
+| Texture replacement packs | Supported | PNG/DDS images keyed by the game's texture key, in the de-facto PS2 texture-pack layout; texture dumps. |
+
+### Texture packs
+
+CoreGS reads the de-facto PS2 texture-pack layout, the same one GT4Recomp's CoreGS 2.0 reads. The
+host points `COREGS_HW_TEXTURES` at its `Textures` folder (GT4Recomp uses
+`Documents\Gran Turismo 4\Textures`) and every loose `.png` or `.dds` below it whose basename
+matches a replacement key is used. A pack may sit directly in `Textures` or in any subfolder of it;
+the depth does not matter. Loose files are read; zip archives are not in this build.
+
+Format P is the community pack naming, used for reading and for dumps:
+
+```
+<tex>[-<clut>]-r<W>x<H>-<bits>.<png|dds>     1234-5678-r128x64-00001dc0.png
+```
+
+`<tex>` and `<clut>` are the 64-bit XXH3 hashes of the texture and palette blocks, in lower-case
+hex; `<W>x<H>` and the CLUT token are optional; `<bits>` packs the texture format, size and TEXA
+fields in eight lower-case hex digits.
+
+Format G is CoreGS's own layout (used by the tests and tools):
+
+```
+<textures root>/<serial>/gt4/<any depth>/t-<tex:016x>-<pal:016x>-<W>x<H>.<png|dds>
+SCUS-97328/gt4/cars/t-0000000000001234-000000000000abcd-128x64.png
+```
+
+A dump (`COREGS_HW_DUMP_TEXTURES=1`) is an RGBA8 PNG named with the Format P dump rule and written
+to `COREGS_HW_TEXTURE_DUMP_DIR` (default: a `TextureDumps` folder beside `Textures`). Because the
+name is a valid replacement name, dropping the dump back into `Textures` replaces that texture.
 
 ## Render targets, readbacks and memory
 

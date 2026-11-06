@@ -529,7 +529,7 @@ void TestPackScan() {
                                                          .count())));
   fs::create_directories(root / "SCUS-97328" / "replacements" / "sub");
   fs::create_directories(root / "SCUS-97328" / "replacements" / ".hidden");
-  fs::create_directories(root / "SCUS-97328" / "textures");
+  fs::create_directories(root / "SCUS-97328" / "gt4");
   const auto write = [](const fs::path& path, const std::string& text) {
     std::ofstream out(path, std::ios::binary);
     out << text;
@@ -538,7 +538,7 @@ void TestPackScan() {
   write(root / "SCUS-97328" / "replacements" / ".hidden" / "abc-00001dc0.dds", "b");
   write(root / "SCUS-97328" / "replacements" / "notes.txt", "c");
   write(root / "SCUS-97328" / "replacements" / "1234-1234-00001dd3.png", "d");
-  write(root / "SCUS-97328" / "textures" / "t-0000000000001234-0000000000000000-8x8.png", "e");
+  write(root / "SCUS-97328" / "gt4" / "t-0000000000001234-0000000000000000-8x8.png", "e");
   write(root / "SCUS-97328.zip", "not a zip");
 
   const UnsupportedArchiveReader archives;
@@ -567,6 +567,63 @@ void TestPackScan() {
   gKey.width = 8;
   gKey.height = 8;
   CHECK(index.FindFormatG(gKey).has_value());
+
+  std::error_code removeError;
+  fs::remove_all(root, removeError);
+}
+
+// The pack layout on disk and the exact key text. Format G files live under <root>/<serial>/gt4 (any depth)
+// and are named t-<tex:016x>-<pal:016x>-<W>x<H>.<png|dds>. The folder CoreGS reads at run time is the flat
+// Textures folder: any loose PNG/DDS below it with a Format P name is a replacement, and a dump name is
+// directly usable as one.
+void TestPackLayoutAndKeyText() {
+  namespace fs = std::filesystem;
+  const fs::path root = fs::temp_directory_path() /
+                        ("hw_gs_replace_layout_" + std::to_string(static_cast<unsigned long long>(
+                                                      std::chrono::steady_clock::now()
+                                                          .time_since_epoch()
+                                                          .count())));
+  fs::create_directories(root / "SCUS-97328" / "gt4" / "cars");
+  fs::create_directories(root / "Textures" / "a pack");
+  const auto write = [](const fs::path& path, const std::string& text) {
+    std::ofstream out(path, std::ios::binary);
+    out << text;
+  };
+
+  FormatGKey gKey;
+  gKey.textureHash = 0x1234;
+  gKey.paletteHash = 0xabcd;
+  gKey.width = 128;
+  gKey.height = 64;
+  const std::string gName = FormatGFileName(gKey, ImageExtension::Png);
+  CHECK(gName == "t-0000000000001234-000000000000abcd-128x64.png");
+  write(root / "SCUS-97328" / "gt4" / "cars" / gName, "g");
+
+  const UnsupportedArchiveReader archives;
+  ReplacementIndex gIndex;
+  const ScanReport gReport = gIndex.ScanFormatG(root, "SCUS-97328", archives);
+  CHECK_EQ(gReport.filesRegistered, 1u);
+  const std::optional<PackEntry> gFound = gIndex.FindFormatG(gKey);
+  CHECK(gFound.has_value() && gFound->basename == gName);
+  CHECK(gFound.has_value() && gFound->file.filename() == gName);
+
+  FormatPRecord pRecord;
+  pRecord.textureHash = 0x1234;
+  pRecord.clutHash = 0x5678;
+  pRecord.regionWidth = 128;
+  pRecord.regionHeight = 64;
+  pRecord.bits = 0x1dc0;
+  pRecord.indexed = true;
+  const std::string pName = FormatPDumpName(pRecord, ImageExtension::Png);
+  CHECK(pName == "1234-5678-r128x64-00001dc0.png");
+  write(root / "Textures" / "a pack" / pName, "p");
+
+  ReplacementIndex flatIndex;
+  const ScanReport pReport = flatIndex.ScanFormatPFolder(root / "Textures", archives);
+  CHECK_EQ(pReport.filesRegistered, 1u);
+  CHECK(flatIndex.FindFormatP(pRecord).has_value());
+  const std::optional<ParsedFormatPName> parsed = ParseFormatPFileName(pName);
+  CHECK(parsed.has_value() && FormatPNameMatches(*parsed, pRecord));
 
   std::error_code removeError;
   fs::remove_all(root, removeError);
@@ -765,6 +822,7 @@ int RunAll() {
   TestFormatPRegionQuirk();
   TestMipChainAndUploadInference();
   TestPackScan();
+  TestPackLayoutAndKeyText();
   TestImages();
   std::printf("hw_gs_replace: %d checks, %d failures\n", g_checks, g_failures);
   return g_failures == 0 ? 0 : 1;

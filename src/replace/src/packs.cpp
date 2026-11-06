@@ -88,7 +88,7 @@ bool UnsupportedArchiveReader::ReadEntry(const fs::path& archive, std::string_vi
 ScanReport ReplacementIndex::ScanFormatG(const fs::path& root, std::string_view serial,
                                          const ArchiveReader& archives) {
   ScanReport report;
-  const fs::path folder = root / std::string(serial) / "textures";
+  const fs::path folder = root / std::string(serial) / "gt4";
   const std::vector<fs::path> files = SortedFilesRecursive(folder, report.messages);
 
   const auto registerEntry = [&](const fs::path& file, const std::string& member,
