@@ -56,7 +56,7 @@ set(COREGS_CORE_SOURCES
     replace/src/packs.cpp
     replace/src/images.cpp
     replace/src/stb_image_impl.cpp
-    replace/tests/png_encode.cpp
+    replace/src/png_encode.cpp
     core2/core2_upload.cpp
     core2/core2_depth_alias.cpp)
 
@@ -76,6 +76,7 @@ target_include_directories(coregs_core
         "${CMAKE_CURRENT_SOURCE_DIR}/lod"
         "${CMAKE_CURRENT_SOURCE_DIR}/replace/include"
         "${CMAKE_CURRENT_SOURCE_DIR}/replace/tests"
+        "${CMAKE_CURRENT_SOURCE_DIR}/replace/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/replace/third_party"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/core2")

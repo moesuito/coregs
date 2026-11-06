@@ -79,7 +79,9 @@ inline PFN_vkCreateFence coregs_hw_vkCreateFence = nullptr;
 inline PFN_vkCreateInstance coregs_hw_vkCreateInstance = nullptr;
 inline PFN_vkCreateSemaphore coregs_hw_vkCreateSemaphore = nullptr;
 inline PFN_vkCreateSwapchainKHR coregs_hw_vkCreateSwapchainKHR = nullptr;
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
 inline PFN_vkCreateWin32SurfaceKHR coregs_hw_vkCreateWin32SurfaceKHR = nullptr;
+#endif
 inline PFN_vkDestroyCommandPool coregs_hw_vkDestroyCommandPool = nullptr;
 inline PFN_vkDestroyDevice coregs_hw_vkDestroyDevice = nullptr;
 inline PFN_vkDestroyFence coregs_hw_vkDestroyFence = nullptr;

@@ -94,7 +94,9 @@ void resolve_headless(VkInstance instance, std::vector<std::string> &missing) {
 void resolve_surface(VkInstance instance, std::vector<std::string> &missing) {
   resolve(coregs_hw_vkAcquireNextImageKHR, instance, "vkAcquireNextImageKHR", missing);
   resolve(coregs_hw_vkCreateSwapchainKHR, instance, "vkCreateSwapchainKHR", missing);
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
   resolve(coregs_hw_vkCreateWin32SurfaceKHR, instance, "vkCreateWin32SurfaceKHR", missing);
+#endif
   resolve(coregs_hw_vkDestroySurfaceKHR, instance, "vkDestroySurfaceKHR", missing);
   resolve(coregs_hw_vkDestroySwapchainKHR, instance, "vkDestroySwapchainKHR", missing);
   resolve(coregs_hw_vkGetPhysicalDeviceSurfaceCapabilitiesKHR, instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR", missing);

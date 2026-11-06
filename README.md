@@ -122,7 +122,7 @@ See [docs/INTEGRATION.md](docs/INTEGRATION.md) for the exact contract, threading
 
 ```
 include/coregs/     the public headers: coregs.h, options.h, profile.h
-src/backend/        device, swapchain, present scheduler (Windows front end)
+src/hw_gs_backend.cpp  device, swapchain, present scheduler (Windows front end)
 src/core2/          the CoreGS 2.0 renderer: targets, readbacks, texture cache, GPU drawer
 src/frontend/       GIF parser, registers, transfers, batching
 src/memory/         GS local memory, swizzles, page/block identities

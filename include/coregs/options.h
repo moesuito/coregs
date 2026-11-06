@@ -1,5 +1,5 @@
 // MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
-// Written from the TASK-026 specification (docs/hw-renderer-spec), clean room per decision 0069.
+// Written from the CoreGS clean-room specification of the PS2 GS.
 //
 // CoreGS renderer options.
 //
@@ -32,7 +32,7 @@ enum class HalfPixel { native, normal, off };
 enum class NativePostfx { off, normal, aggressive };
 enum class Blend { basic, medium, high, full };
 enum class Mipmap { off, basic, full };
-enum class Filter { ps2, nearest, forced, forced_no_sprite };  // IN-433: forced_no_sprite keeps sprites as the game asks
+enum class Filter { ps2, nearest, forced, forced_no_sprite };  // forced_no_sprite keeps sprites filtered as the game asks
 enum class Dither { native, fine, off };
 enum class AutoFlush { sprites, all, off };
 enum class SyncMode { cache, writeback };
@@ -41,7 +41,7 @@ enum class DirtyFilter { automatic, linear, nearest };
 enum class DumpTextures { off, on, mips };
 enum class DumpFormat { g, p };
 // vram: the reference image; scanout: the 1x presentation image; upscaled: the GPU presentation compose at
-// COREGS_HW_SCALE (IN-372; interlaced frames fall back to the 1x presentation).
+// COREGS_HW_SCALE (interlaced frames fall back to the 1x presentation).
 enum class DumpSource { vram, scanout, upscaled };
 enum class PresentFilter { bilinear, nearest, sharp };
 enum class DeinterlaceAlgorithm { automatic, off, weave, bob, blend, adaptive };
@@ -100,8 +100,8 @@ struct Options {
   DumpSource dump_source = DumpSource::vram;
   bool gpu_timing = false;
   bool gpu_decode = false;
-  bool decode_reuse = true;  // IN-369: a run reuses an identical GLM texture decode
-  bool clut_defer = true;    // IN-370: GPU CLUT loads deferred, palettes read from the GLM when exact
+  bool decode_reuse = true;  // a run reuses an identical GLM texture decode
+  bool clut_defer = true;    // GPU CLUT loads deferred, palettes read from the GLM when exact
 };
 
 // Parses every COREGS_HW_* variable through `lookup`. Unset or empty values take
