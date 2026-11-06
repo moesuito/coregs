@@ -13,11 +13,14 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 
 #if defined(_WIN32)
-#include <stdlib.h>  // _wgetenv
+#include <stdlib.h>  // _wgetenv, _fseeki64, _ftelli64
+#else
+#include <sys/types.h>  // off_t
 #endif
 
 #if defined(_M_X64) || defined(_M_IX86) || defined(__x86_64__) || defined(__i386__)
@@ -58,6 +61,24 @@ inline const std::filesystem::path::value_type *GetPathEnvironment(const char *n
     return _wgetenv(wideName);
 #else
     return std::getenv(name);
+#endif
+}
+
+// Positions a stdio stream at a 64-bit offset, and reads it back. Captures are several GB and long is
+// 32 bits on Windows, so the plain fseek/ftell pair would truncate.
+inline int SeekFile(std::FILE *file, std::int64_t offset, int origin) {
+#if defined(_WIN32)
+    return _fseeki64(file, offset, origin);
+#else
+    return ::fseeko(file, static_cast<off_t>(offset), origin);
+#endif
+}
+
+inline std::int64_t TellFile(std::FILE *file) {
+#if defined(_WIN32)
+    return _ftelli64(file);
+#else
+    return static_cast<std::int64_t>(::ftello(file));
 #endif
 }
 

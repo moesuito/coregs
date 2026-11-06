@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "platform/hw_platform.hpp"
+
 #include "hw_gs_vulkan_loader.hpp"
 #include "hw_gs_vulkan_device_table.hpp"
 #include "writeback/hw_gs_writeback.hpp"
@@ -171,9 +173,9 @@ bool ReadFile(const char* path, std::vector<std::uint8_t>& out) {
     std::FILE* file = std::fopen(path, "rb");
     if (!file) return false;
     // 64-bit offsets: race captures are several GB (long is 32 bits on Windows).
-    _fseeki64(file, 0, SEEK_END);
-    const long long size = _ftelli64(file);
-    _fseeki64(file, 0, SEEK_SET);
+    platform::SeekFile(file, 0, SEEK_END);
+    const long long size = static_cast<long long>(platform::TellFile(file));
+    platform::SeekFile(file, 0, SEEK_SET);
     if (size > 0) {
         out.resize(static_cast<std::size_t>(size));
         const std::size_t read = std::fread(out.data(), 1, out.size(), file);
