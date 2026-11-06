@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: MIT
+//
+// GLM word merge (TASK-027 M7/M10, chapters 04.9 and 05.6, IN-350). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 04.9, 05.6 and 10, clean room (decision 0070).
+//
+// An EE upload into GLM-owned pages (pages whose newest content lives only in the GLM) is applied to the GLM
+// here instead of downloading those pages first: the CPU computes the exact bits the upload writes (value and
+// bit mask per 32-bit word) and each invocation merges one word. Words are unique in a merge list.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(std430, set = 0, binding = 2) readonly buffer MergeRing {
+    uint merge_ring[];  // triples: GLM word index, value, bit mask
+};
+
+layout(push_constant) uniform MergeParameters {
+    uint base;   // first uint of the triples in the ring
+    uint count;  // number of triples
+} pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.count) {
+        return;
+    }
+    uint word = merge_ring[pc.base + 3u * i];
+    uint value = merge_ring[pc.base + 3u * i + 1u];
+    uint mask = merge_ring[pc.base + 3u * i + 2u];
+    glm_words[word] = (glm_words[word] & ~mask) | (value & mask);
+}

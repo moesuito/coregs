@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: MIT
+//
+// GT4's tone-sequence strip executor (TASK-027, parity plan item 2; chapters 09.4 variant A and 07.4).
+// Copyright (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec (clean room, decision 0070).
+//
+// Every race frame GT4 converts its 32-bit frame buffer page by page: it reads the page through an 8-bit (T8) view
+// with a ramp CLUT into a temporary page (three additive channel batches), then writes the result back with eight
+// decal T8 sprites, one per 8-pixel column block of the page. Each strip is eight wide and 32 tall with one texel
+// per pixel, so its exact effect on the destination (chapter 09.4 variant A) is
+//
+//     dest(x, y).rgb = entry(index(x % 8, y)).rgb,   alpha untouched,
+//
+// where `index` is the strip's T8 texture and `entry` is the palette the strip's CLUT base names: a 256-entry CT32
+// palette (chapter 07.4 CSM1 layout) held by one 16x16 quadrant of the temporary page. One invocation per pixel of
+// the page writes the eight strips of one page in a single dispatch. Both sources are read from the GLM, which the
+// caller made current; the destination word keeps its alpha byte (a CT24 write, chapter 05).
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 64) in;
+
+// PSM codes (chapter 01.1).
+const uint kPsmCt32 = 0u;
+const uint kPsmCt24 = 1u;
+const uint kPsmT8 = 0x13u;
+
+layout(push_constant) uniform ToneStrips {
+    uint destBp;       // destination page base, in blocks (the CT24 view of the frame buffer)
+    uint destBw;       // destination FBW (64-pixel units)
+    uint x0;           // destination page origin, in pixels (64-aligned, 32-aligned)
+    uint y0;
+    uint width;        // 8 x the number of strips, pixels
+    uint height;       // 32 pixels
+    uint sourceBp;     // the temporary page (CT32, 64 x 32)
+    uint sourceBw;
+    uint indexBp;      // the strip's T8 texture (8 x 32 texels, TBW 1)
+    uint indexBw;
+    uint stripCount;   // number of strips this page holds (0..8)
+    uint quadrants[8]; // per strip: qx + 4 * qy of the temporary page's 16x16 palette quadrant
+} pc;
+
+void main() {
+    const uint id = gl_GlobalInvocationID.x;
+    if (id >= pc.width * pc.height) {
+        return;
+    }
+    const uint x = id % pc.width;
+    const uint y = id / pc.width;
+    const uint strip = x / 8u;
+    if (strip >= pc.stripCount) {
+        return;
+    }
+    // The strip's index texel: one texel per pixel, nearest (the strip's registers in 09.4).
+    const uint index = glm_read(pc.indexBp, pc.indexBw, kPsmT8, x - strip * 8u, y);
+    // 07.4: entry i of a 256-entry CSM1 palette sits at x = (i & 7) + 8 * bit4(i), y = 2 * (i >> 5) + bit3(i).
+    const uint entryX = (index & 7u) + 8u * ((index >> 4) & 1u);
+    const uint entryY = 2u * (index >> 5) + ((index >> 3) & 1u);
+    const uint quadrant = pc.quadrants[strip];
+    const uint sourceX = 16u * (quadrant & 3u) + entryX;
+    const uint sourceY = 16u * (quadrant >> 2) + entryY;
+    const uint colour = glm_read(pc.sourceBp, pc.sourceBw, kPsmCt32, sourceX, sourceY);
+    // CT24 keeps the destination's alpha byte (chapter 05): glm_write replaces only the pixel's 24 bits.
+    glm_write(pc.destBp, pc.destBw, kPsmCt24, pc.x0 + x, pc.y0 + y, colour & 0x00FFFFFFu);
+}

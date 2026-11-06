@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: MIT
+//
+// GLM target load (TASK-027 M7/M10, chapters 04.9 step 3 and 05.3, IN-350). Copyright (c) 2026 GT4Recomp
+// contributors. Written from docs/hw-renderer-spec chapters 04.9, 05.3 and 10, clean room (decision 0070).
+//
+// The inverse of hw_glm_swizzle.comp: one invocation per pixel of a rectangle of a resident target; the
+// target pixel receives the stored word of its own (BP, BW, PSM) layout read from the GLM (the value
+// LocalMemory::readPixel would return on the same bytes). A target whose memory another view last drew (GT4
+// reuses its buffers with other widths and formats) is so filled on the GPU, without a CPU write-back.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 4, r32ui) uniform writeonly uimage2D hw_target;
+
+layout(push_constant) uniform LoadParameters {
+    uint bp;    // target base in blocks
+    uint bw;
+    uint psm;
+    uint x0;    // rectangle in target pixels
+    uint y0;
+    uint width;
+    uint height;
+} pc;
+
+void main() {
+    uvec2 local = gl_GlobalInvocationID.xy;
+    if (local.x >= pc.width || local.y >= pc.height) {
+        return;
+    }
+    uint x = pc.x0 + local.x;
+    uint y = pc.y0 + local.y;
+    imageStore(hw_target, ivec2(x, y), uvec4(glm_read(pc.bp, pc.bw, pc.psm, x, y), 0u, 0u, 0u));
+}

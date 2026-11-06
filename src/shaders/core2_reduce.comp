@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 reduction (TASK-027 core rewrite, CORE2-SPEC 4.2 and 8.7). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec/CORE2-SPEC.md, clean room (decision 0070).
+//
+// Reads a native rectangle of a target image at the internal scale into 1x stored words: native pixel N takes the
+// output pixel floor((N + 0.5) * s) on each axis (nearest at native centres). Used for readbacks to GS memory.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(std430, set = 0, binding = 0) writeonly buffer ReducedWords {
+    uint words[];
+};
+layout(set = 0, binding = 1, r32ui) uniform readonly uimage2D target;
+
+layout(push_constant) uniform ReduceParameters {
+    uint first_word;
+    uint x0;
+    uint y0;
+    uint width;
+    uint height;
+    float scale;
+} pc;
+
+void main() {
+    uvec2 native = gl_GlobalInvocationID.xy;
+    if (native.x >= pc.width || native.y >= pc.height) {
+        return;
+    }
+    vec2 centre = (vec2(pc.x0 + native.x, pc.y0 + native.y) + vec2(0.5)) * pc.scale;
+    ivec2 pixel = min(ivec2(floor(centre)), imageSize(target) - ivec2(1));
+    words[pc.first_word + native.y * pc.width + native.x] = imageLoad(target, pixel).x;
+}

@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 target to GLM (TASK-027 core rewrite, IN-408). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 01.3, 04.9 and CORE2-SPEC 4.2, clean room (decision 0070).
+//
+// Writes a native rectangle of a 32-bit colour or depth target into the GLM at the target's own addresses (CT32 or
+// Z32 layout, IN-417), each pixel taken at its native centre as the readback (core2_reduce.comp) takes it. A GLM reader (a texture decode, a
+// CLUT load) then sees what a readback would have stored in GS memory, without the CPU waiting for the GPU. A target
+// only ever drawn as 24-bit (CT24, Z24) keeps the top byte that the GLM holds.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 3, r32ui) uniform readonly uimage2D target;
+
+layout(push_constant) uniform MaterializeParameters {
+    uint tbp;        // the target's base pointer (blocks) and width (pages)
+    uint tbw;
+    uint x0;         // the native rectangle, inclusive origin and size
+    uint y0;
+    uint width;
+    uint height;
+    uint full_word;  // 0: only 24-bit draws
+    float scale;
+    uint psm;        // PSMCT32 (0x00) or PSMZ32 (0x30), the 32-bit layouts, or a 16-bit colour layout (IN-483)
+} pc;
+
+void main() {
+    uvec2 native = gl_GlobalInvocationID.xy;
+    if (native.x >= pc.width || native.y >= pc.height) {
+        return;
+    }
+    uint x = pc.x0 + native.x;
+    uint y = pc.y0 + native.y;
+    ivec2 sample_at = min(ivec2(floor((vec2(x, y) + vec2(0.5)) * pc.scale)), imageSize(target) - ivec2(1));
+    uint word = imageLoad(target, sample_at).x;
+    GlmSlot slot = glm_slot(pc.tbp, pc.tbw, pc.psm, x, y);  // a 32-bit layout: one whole GLM word per pixel
+    if (slot.mask != 0xFFFFFFFFu) {  // IN-483: a 16-bit target's image holds the halfword; two pixels share a GLM word
+        glm_write(pc.tbp, pc.tbw, pc.psm, x, y, word);
+        return;
+    }
+    if (pc.full_word == 0u) {
+        word = (word & 0x00FFFFFFu) | (glm_words[slot.word_index] & 0xFF000000u);
+    }
+    glm_words[slot.word_index] = word;
+}

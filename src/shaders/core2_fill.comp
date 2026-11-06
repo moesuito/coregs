@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 constant fill (TASK-027 IN-442). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec (chapters 08 and 12.6), clean room (decision 0070).
+//
+// An untextured sprite batch whose every vertex has the same colour and Z (GT4's full-screen clears of colour, depth
+// or alpha) draws one constant fragment over a pixel rectangle. Drawn as a compute dispatch instead of rasterised:
+// storage writes from compute run about twice as fast as from the fragment stage at high scales (IN-442). Each
+// pixel of the rectangle takes exactly what hw_pixel_uber.frag computes for it: the same fragment (colour, Z as the
+// rasteriser gives it, the dither cell), the same hw_process_pixel and the same reads and writes.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_pixel_core.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+// The batch's pixel state block (the 48 words of PixelStateBlock in hw_pixel_uber.frag, in gpufield order).
+layout(std430, set = 0, binding = 0) readonly buffer StateWords {
+    uint fields[];
+};
+layout(set = 0, binding = 1, r32ui) uniform uimage2D hw_frame;
+layout(set = 0, binding = 2, r32ui) uniform uimage2D hw_depth;
+
+layout(push_constant) uniform FillParameters {
+    uint x0;           // output pixel rectangle [x0, x1) x [y0, y1) at the internal scale
+    uint y0;
+    uint x1;
+    uint y1;
+    uint colour;       // R | G << 8 | B << 16 | A << 24, the vertices' colour
+    uint z;            // the vertices' Z
+    uint z_max;        // the Z format maximum (the vertex stage's clamp)
+    uint flags;        // bit 0: depth from position (the scaled pass, IN-392); bit 1: fine dither (8.6)
+    uint pixel_scale;  // the internal scale (the dither cell size without the fine dither)
+} pc;
+
+// Field indices of the state block (gpufield).
+const uint F_FORMAT = 0u, F_FBMSK = 1u, F_FBA = 2u, F_DITHER = 3u, F_DIMX_LO = 4u, F_DIMX_HI = 5u, F_ATE = 6u,
+           F_ATST = 7u, F_AFAIL = 8u, F_AREF = 9u, F_DATE_ON = 10u, F_DATM = 11u, F_ZTEST = 12u, F_ZTST = 13u,
+           F_ZMSK = 14u, F_ZFORMAT = 15u, F_BLEND_ON = 16u, F_PABE = 17u, F_BLEND_A = 18u, F_BLEND_B = 19u,
+           F_BLEND_C = 20u, F_BLEND_D = 21u, F_FIX = 22u, F_COLCLAMP = 23u, F_KEEP_TOP_BYTE = 47u;
+
+void main() {
+    const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy) + ivec2(int(pc.x0), int(pc.y0));
+    if (pixel.x >= int(pc.x1) || pixel.y >= int(pc.y1)) {
+        return;
+    }
+    HwPixelState s;
+    s.format = fields[F_FORMAT];
+    s.fbmsk = fields[F_FBMSK];
+    s.fba = fields[F_FBA];
+    s.dither = fields[F_DITHER];
+    s.dimx_lo = fields[F_DIMX_LO];
+    s.dimx_hi = fields[F_DIMX_HI];
+    s.ate = fields[F_ATE];
+    s.atst = fields[F_ATST];
+    s.afail = fields[F_AFAIL];
+    s.aref = fields[F_AREF];
+    s.date_on = fields[F_DATE_ON];
+    s.datm = fields[F_DATM];
+    s.ztest = fields[F_ZTEST];
+    s.ztst = fields[F_ZTST];
+    s.zmsk = fields[F_ZMSK];
+    s.zformat = fields[F_ZFORMAT];
+    s.blend_on = fields[F_BLEND_ON];
+    s.pabe = fields[F_PABE];
+    s.blend_a = fields[F_BLEND_A];
+    s.blend_b = fields[F_BLEND_B];
+    s.blend_c = fields[F_BLEND_C];
+    s.blend_d = fields[F_BLEND_D];
+    s.fix = fields[F_FIX];
+    s.colclamp = fields[F_COLCLAMP];
+
+    HwFragment f;
+    const bool fine = (pc.flags & 2u) != 0u;
+    f.x = fine ? uint(pixel.x) : uint(pixel.x) / pc.pixel_scale;
+    f.y = fine ? uint(pixel.y) : uint(pixel.y) / pc.pixel_scale;
+    f.colour = ivec4(int(pc.colour & 0xFFu), int((pc.colour >> 8) & 0xFFu), int((pc.colour >> 16) & 0xFFu),
+                     int(pc.colour >> 24));
+    // The fragment's Z as hw_pixel_uber.frag gets it: at scale the rasteriser's depth (the vertex stage's
+    // min(Z, z_max) * 2^-32, constant over the sprite) floored after * 2^32; at 1x the varying float(Z).
+    if ((pc.flags & 1u) != 0u) {
+        const float depth = float(min(pc.z, pc.z_max)) * (1.0 / 4294967296.0);
+        f.z = uint(min(floor(depth * 4294967296.0), 4294967040.0));
+    } else {
+        f.z = uint(clamp(float(pc.z), 0.0, 4294967040.0));
+    }
+
+    // The same reads as hw_pixel_uber.frag (IN-438).
+    const bool depth_read = s.ztest != 0u && (s.ztst != HW_DEPTH_ALWAYS || (s.zmsk == 0u && s.zformat != 0u));
+    const bool frame_read = s.blend_on != 0u || s.date_on != 0u || (s.fbmsk & hw_valid_mask(s.format)) != 0u ||
+                            (s.ate != 0u && s.afail == HW_ALPHA_FAIL_RGB_ONLY && s.format == HW_FORMAT_CT32) ||
+                            (fields[F_KEEP_TOP_BYTE] != 0u && s.format == HW_FORMAT_CT24);
+    const uint frame_old = frame_read ? imageLoad(hw_frame, pixel).x : 0u;
+    const uint depth_old = depth_read ? imageLoad(hw_depth, pixel).x : 0u;
+    HwOutcome o = hw_process_pixel(s, f, frame_old, depth_old);
+    if (o.frame_written) {
+        if (fields[F_KEEP_TOP_BYTE] != 0u && s.format == HW_FORMAT_CT24) {
+            o.frame_stored = (o.frame_stored & 0x00FFFFFFu) | (frame_old & 0xFF000000u);
+        }
+        imageStore(hw_frame, pixel, uvec4(o.frame_stored));
+    }
+    if (o.depth_written) {
+        imageStore(hw_depth, pixel, uvec4(o.depth_stored));
+    }
+}

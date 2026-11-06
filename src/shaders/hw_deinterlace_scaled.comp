@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: MIT
+//
+// Deinterlace of the scaled presentation frame (TASK-027 M12, chapter 13.4 at an internal scale, IN-381). Copyright
+// (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec chapters 13.3 and 13.4, clean room (decision
+// 0070); our own algorithm per 13.4 ("adaptive": Decision), the GPU form of display::Deinterlacer.
+//
+// At scale s the merge image has s output rows per native row. Every row rule of 13.4 is applied per NATIVE row: the
+// field's rows are the native rows whose parity is the field's, the line above and below a missing line are the
+// native rows above and below (s output rows away, same sub-row), and the edges are the first and last native rows.
+// So for an image whose every native pixel is an s x s block this kernel gives exactly the CPU deinterlacer's 1x
+// result blown up (fixture hw_scale_interlaced_present), and real sub-pixel detail inside a native row is kept.
+//
+// Modes (push constant `mode`):
+//   1 weave update: woven rows of the field's parity take the current merge image (all rows when `init`).
+//   2 weave output: the woven image.        3 blend output: vertical 1/4, 1/2, 1/4 of the woven image.
+//   4 bob: the merge image shifted down by s * (1 - field) rows.
+//   5 adaptive (IN-396, the reference's motion test): field rows pass; a missing row is the previous opposite-parity
+//     field's row (one back, "woven") when the current and previous same-parity fields (two back) agree on the rows
+//     above and below and the woven field agrees with the older field of its parity (three back) on the row itself
+//     (no channel moves by more than the threshold). Moving: the average of the rows above and below when they agree
+//     and the woven row differs from them at least as much, else the woven row. The edge rows are always woven.
+//   6 adaptive, moving rows interpolated (IN-405, CORE2's default): as 5, but a moving pixel is always the average of
+//     the rows above and below. Rule 5 keeps the woven row where those two rows disagree, which on thin strokes moving
+//     fast (GT4's GT Mode ticker) weaves two text positions into a comb; the reference shows that text clean.
+
+#version 450
+
+// TASK-179: indexing `history` with a push constant (load_history) needs shaderStorageImageArrayDynamicIndexing. A device
+// without it runs the build with -DHWR_CONSTANT_INDEXING=1, where every access names its image with a constant index;
+// the indices are the same (always below 4: every caller tests `< 4u` first), so the pixels are the same.
+#ifndef HWR_CONSTANT_INDEXING
+#define HWR_CONSTANT_INDEXING 0
+#endif
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0, r32ui) uniform uimage2D history[4];  // merge images of the last fields
+layout(set = 0, binding = 4, r32ui) uniform uimage2D woven;
+layout(set = 0, binding = 5, r32ui) uniform readonly uimage2D previous_output;
+layout(set = 0, binding = 6, r32ui) uniform writeonly uimage2D display_out;
+
+layout(push_constant) uniform DeinterlaceParameters {
+    uint mode;
+    uint width;       // output pixels (scaled)
+    uint height;
+    uint scale;
+    uint row_parity;  // the field's native row parity (field XOR the _bff setting)
+    uint field;       // the VBlank field (bob shift)
+    uint current;     // history index of this field's merge image
+    uint previous_same;   // history index of the previous same-parity field, or 4 when there is none
+    uint previous_other;  // history index of the previous opposite-parity field, or 4 when there is none
+    uint have_output;     // previous_output holds the last adaptive output of this size
+    uint threshold_permille;  // 13.4 threshold x 1000 (80 = 0.08)
+    uint init;            // weave update: copy every row (first field)
+    uint row_step;        // IN-386: output rows per algorithm row: 1 = one output row (the reference), scale = one
+                          // native row (the IN-381 interpretation)
+    uint older_other;     // IN-396: history index of the opposite-parity field three back, or 4 when there is none
+} pc;
+
+uvec4 unpack_rgba(uint word) {
+    return uvec4(word & 0xFFu, (word >> 8) & 0xFFu, (word >> 16) & 0xFFu, (word >> 24) & 0xFFu);
+}
+
+uint pack_rgba(uvec4 c) {
+    return c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
+}
+
+uint load_history(uint index, ivec2 p) {
+#if HWR_CONSTANT_INDEXING
+    switch (index) {
+        case 0u: return imageLoad(history[0], p).x;
+        case 1u: return imageLoad(history[1], p).x;
+        case 2u: return imageLoad(history[2], p).x;
+        default: return imageLoad(history[3], p).x;
+    }
+#else
+    return imageLoad(history[index], p).x;
+#endif
+}
+
+// IN-396: how far the largest R, G or B difference lies above the threshold, in 1/255000 units (difference * 1000 -
+// threshold_permille * 255): positive = moved. The same integers as display::channel_excess.
+int channel_excess(uint a, uint b) {
+    ivec3 x = ivec3(unpack_rgba(a).rgb);
+    ivec3 y = ivec3(unpack_rgba(b).rgb);
+    ivec3 d = abs(x - y);
+    return max(d.r, max(d.g, d.b)) * 1000 - int(pc.threshold_permille) * 255;
+}
+
+void main() {
+    uvec2 gid = gl_GlobalInvocationID.xy;
+    if (gid.x >= pc.width || gid.y >= pc.height) {
+        return;
+    }
+    ivec2 p = ivec2(gid);
+    const int s = int(pc.row_step);
+    const uint row = gid.y / pc.row_step;
+    const uint rows = pc.height / pc.row_step;
+    bool field_row = (row & 1u) == pc.row_parity;
+
+    if (pc.mode == 1u) {
+        if (pc.init != 0u || field_row) {
+            imageStore(woven, p, uvec4(load_history(pc.current, p), 0u, 0u, 0u));
+        }
+        return;
+    }
+    if (pc.mode == 2u) {
+        imageStore(display_out, p, uvec4(imageLoad(woven, p).x, 0u, 0u, 0u));
+        return;
+    }
+    if (pc.mode == 3u) {
+        int up = row == 0u ? p.y : p.y - s;
+        int down = row + 1u >= rows ? p.y : p.y + s;
+        uvec4 a = unpack_rgba(imageLoad(woven, ivec2(p.x, up)).x);
+        uvec4 b = unpack_rgba(imageLoad(woven, p).x);
+        uvec4 c = unpack_rgba(imageLoad(woven, ivec2(p.x, down)).x);
+        imageStore(display_out, p, uvec4(pack_rgba((a + 2u * b + c + 2u) / 4u), 0u, 0u, 0u));
+        return;
+    }
+    if (pc.mode == 4u) {
+        int shift = s * (1 - int(pc.field));
+        int row = clamp(p.y - shift, 0, int(pc.height) - 1);
+        imageStore(display_out, p, uvec4(load_history(pc.current, ivec2(p.x, row)), 0u, 0u, 0u));
+        return;
+    }
+    // mode 5: adaptive (display::Deinterlacer::adaptive in GPU form).
+    uint here = load_history(pc.current, p);
+    if (field_row) {
+        imageStore(display_out, p, uvec4(here, 0u, 0u, 0u));
+        return;
+    }
+    bool have_woven = pc.previous_other < 4u || pc.have_output != 0u;
+    uint woven_word = pc.previous_other < 4u ? load_history(pc.previous_other, p)
+                      : pc.have_output != 0u ? imageLoad(previous_output, p).x
+                                             : here;
+    bool edge_row = row == 0u || row + 1u == rows;
+    if (edge_row) {
+        imageStore(display_out, p, uvec4(woven_word, 0u, 0u, 0u));
+        return;
+    }
+    uint up = load_history(pc.current, ivec2(p.x, p.y - s));
+    uint down = load_history(pc.current, ivec2(p.x, p.y + s));
+    uvec4 bob4 = (unpack_rgba(up) + unpack_rgba(down) + 1u) / 2u;
+    uint bob = pack_rgba(bob4);
+    bool motion = pc.previous_same >= 4u || pc.previous_other >= 4u || pc.older_other >= 4u;
+    if (!motion) {
+        motion = channel_excess(up, load_history(pc.previous_same, ivec2(p.x, p.y - s))) > 0 ||
+                 channel_excess(down, load_history(pc.previous_same, ivec2(p.x, p.y + s))) > 0 ||
+                 channel_excess(woven_word, load_history(pc.older_other, p)) > 0;
+    }
+    // Mode 6: the same tests on the neighbours up to two native pixels left and right, so a pixel inside a moving
+    // stroke that happens to match its value two fields back still counts as moving.
+    if (!motion && pc.mode == 6u) {
+        int last = int(pc.width) - 1;
+        for (int k = -2; k <= 2 && !motion; ++k) {
+            if (k == 0) continue;
+            int x = clamp(p.x + k * int(pc.scale), 0, last);
+            motion = channel_excess(load_history(pc.current, ivec2(x, p.y - s)),
+                                    load_history(pc.previous_same, ivec2(x, p.y - s))) > 0 ||
+                     channel_excess(load_history(pc.current, ivec2(x, p.y + s)),
+                                    load_history(pc.previous_same, ivec2(x, p.y + s))) > 0 ||
+                     channel_excess(load_history(pc.previous_other, ivec2(x, p.y)),
+                                    load_history(pc.older_other, ivec2(x, p.y))) > 0;
+        }
+    }
+    uint result = woven_word;
+    if (motion) {
+        int up_down = channel_excess(up, down);
+        int up_woven = channel_excess(up, woven_word);
+        bool interpolate = !have_woven || pc.mode == 6u || (up_down < 0 && 10 * up_woven >= 9 * up_down);
+        result = interpolate ? bob : woven_word;
+    }
+    imageStore(display_out, p, uvec4(result, 0u, 0u, 0u));
+}

@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 display merge (TASK-027 core rewrite, CORE2-SPEC 5.3). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec/CORE2-SPEC.md and chapters 13.2 and 13.3, clean room (decision 0070).
+//
+// Each enabled circuit reads its read rectangle from a source image (a target at the internal scale, or a 1x image
+// of GS memory when no target holds the buffer, 5.2) and is stretched over its display placement in the output
+// (native placement x the output scale). Background, merge order and merge alpha follow 13.3, as the old kernel.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 1, r32ui) uniform readonly uimage2D source_a;  // read circuit 1
+layout(set = 0, binding = 2, r32ui) uniform readonly uimage2D source_b;  // read circuit 2
+layout(set = 0, binding = 3, r32ui) uniform writeonly uimage2D display_image;
+
+// Per circuit (10 words): enabled, format (0 CT32, 1 CT24, 2 CT16), source scale, read x, read y (native, in the
+// source image), read width, read height, placement x, placement y, placement width; then the placement heights.
+layout(push_constant) uniform ComposeParameters {
+    uint out_width;
+    uint out_height;
+    uint out_scale;
+    uint background;  // RGBA8
+    uint alp;
+    uint mmod;
+    uint c1[10];
+    uint c2[10];
+    uint height1;
+    uint height2;
+} pc;
+
+uvec4 word_colour(uint stored, uint format) {
+    uint word = stored;
+    if (format == 1u) {
+        word = stored & 0x00FFFFFFu;
+    } else if (format == 2u) {
+        uint r = stored & 0x1Fu;
+        uint g = (stored >> 5) & 0x1Fu;
+        uint b = (stored >> 10) & 0x1Fu;
+        uint a = (stored >> 15) & 1u;
+        word = (r << 3) | (g << 11) | (b << 19) | (a << 31);
+    }
+    uvec4 colour = uvec4(word & 0xFFu, (word >> 8) & 0xFFu, (word >> 16) & 0xFFu, (word >> 24) & 0xFFu);
+    if (format == 1u) {
+        colour.a = 0x80u;
+    }
+    return colour;
+}
+
+uint circuit_word(bool second, uint index) {
+    return second ? pc.c2[index] : pc.c1[index];
+}
+
+bool sample_circuit(bool second, ivec2 p, out uvec4 texel) {
+    texel = uvec4(0u);
+    if (circuit_word(second, 0u) == 0u) {
+        return false;
+    }
+    int s = int(pc.out_scale);
+    int x0 = int(circuit_word(second, 7u)) * s;
+    int y0 = int(circuit_word(second, 8u)) * s;
+    int w = int(circuit_word(second, 9u));
+    int h = int(second ? pc.height2 : pc.height1);
+    uint srcw = circuit_word(second, 5u);
+    uint srch = circuit_word(second, 6u);
+    if (w <= 0 || h <= 0 || srcw == 0u || srch == 0u) {
+        return false;
+    }
+    if (p.x < max(0, x0) || p.x >= x0 + w * s || p.y < max(0, y0) || p.y >= y0 + h * s) {
+        return false;
+    }
+    uint source_scale = circuit_word(second, 2u);
+    // The output pixel's position in the read rectangle, in source pixels (the native read size is stretched over
+    // the native placement, as 13.3 does).
+    uint span_x = srcw * source_scale;
+    uint span_y = srch * source_scale;
+    uint sx = min(uint(p.x - x0) * span_x / uint(w * s), span_x - 1u);
+    uint sy = min(uint(p.y - y0) * span_y / uint(h * s), span_y - 1u);
+    // 8.1: a primitive that starts on the buffer's first row or column leaves the first floor(s/2) output rows and
+    // columns of a target undrawn; the first drawn ones stand in for them (no stale line at the picture's edge).
+    uint undrawn = source_scale / 2u;
+    sx = max(sx, undrawn);
+    sy = max(sy, undrawn);
+    ivec2 at = ivec2(circuit_word(second, 3u) * source_scale + sx, circuit_word(second, 4u) * source_scale + sy);
+    uint stored = 0u;
+    if (second) {
+        at = clamp(at, ivec2(0), imageSize(source_b) - ivec2(1));
+        stored = imageLoad(source_b, at).x;
+    } else {
+        at = clamp(at, ivec2(0), imageSize(source_a) - ivec2(1));
+        stored = imageLoad(source_a, at).x;
+    }
+    texel = word_colour(stored, circuit_word(second, 1u));
+    return true;
+}
+
+uint blend_channel(uint src, uint dst, uint a) {
+    return (src * a + dst * (255u - a) + 127u) / 255u;
+}
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (p.x >= int(pc.out_width) || p.y >= int(pc.out_height)) {
+        return;
+    }
+    uint bg = pc.background;
+    uvec4 colour = uvec4(bg & 0xFFu, (bg >> 8) & 0xFFu, (bg >> 16) & 0xFFu, (bg >> 24) & 0xFFu);
+    uvec4 texel;
+    if (sample_circuit(true, p, texel)) {
+        colour = texel;
+    }
+    if (sample_circuit(false, p, texel)) {
+        uint a = pc.mmod != 0u ? pc.alp : min(255u, texel.a * 2u);
+        colour.r = blend_channel(texel.r, colour.r, a);
+        colour.g = blend_channel(texel.g, colour.g, a);
+        colour.b = blend_channel(texel.b, colour.b, a);
+        colour.a = texel.a;
+    }
+    imageStore(display_image, p, uvec4(colour.r | (colour.g << 8) | (colour.b << 16) | (colour.a << 24), 0u, 0u, 0u));
+}

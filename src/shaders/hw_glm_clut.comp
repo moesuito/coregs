@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: MIT
+//
+// GPU CLUT load from the GLM (TASK-027 chapter 07.7, IN-349). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 07.1 to 07.7, clean room (decision 0070).
+//
+// The same load as clut::ClutUnit::Copy, from the GLM instead of the shadow memory, into a GPU copy of the
+// 512-halfword CLUT buffer (one halfword per uint). One invocation per palette entry: CSM1 places the entries
+// in the 16x16 (8-bit index) or 8x2 (4-bit) layout of 07.2, CSM2 reads a TEXCLUT row; CT32 palettes write the
+// low halfword at 16*group + entry and the high one 256 halfwords later (group = entry/16 + CSA, groups past
+// 15 not loaded); CT16/CT16S palettes write one halfword at (16*CSA + entry) & 511.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(std430, set = 0, binding = 5) buffer ClutHalfwords {
+    uint clut[512];
+};
+
+layout(push_constant) uniform ClutLoad {
+    uint cbp;          // CBP in blocks
+    uint cpsm;         // CT32 (0x00), CT16 (0x02) or CT16S (0x0A)
+    uint csm;          // 0: CSM1, 1: CSM2
+    uint csa;
+    uint eight_bit;    // 1: 256 entries (T8 family), 0: 16 entries (T4 family)
+    uint cbw;          // TEXCLUT.CBW (CSM2)
+    uint cou;          // TEXCLUT.COU
+    uint cov;          // TEXCLUT.COV
+} pc;
+
+void main() {
+    uint e = gl_GlobalInvocationID.x;
+    uint count = pc.eight_bit != 0u ? 256u : 16u;
+    if (e >= count) {
+        return;
+    }
+    uint x;
+    uint y;
+    uint per_row = 1u;
+    if (pc.csm == 0u) {
+        if (pc.eight_bit != 0u) {
+            x = (e & 7u) + 8u * ((e >> 4) & 1u);
+            y = 2u * (e >> 5) + ((e >> 3) & 1u);
+        } else {
+            x = e & 7u;
+            y = e >> 3;
+        }
+    } else {
+        x = pc.cou * 16u + e;
+        y = pc.cov;
+        per_row = pc.cbw;
+    }
+    GlmSlot slot = glm_slot_rows(pc.cbp, per_row, pc.cpsm, x, y);
+    uint raw = (glm_words[slot.word_index] >> slot.shift) & slot.mask;
+    if (pc.cpsm == 0u) {
+        uint group = (e >> 4) + (pc.csa & 15u);
+        if (group > 15u) {
+            return;
+        }
+        uint index = 16u * group + (e & 15u);
+        clut[index] = raw & 0xFFFFu;
+        clut[index + 256u] = raw >> 16;
+    } else {
+        clut[(16u * pc.csa + e) & 511u] = raw & 0xFFFFu;
+    }
+}

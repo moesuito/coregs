@@ -1,0 +1,20 @@
+# Build output
+/build/
+/out/
+/install/
+*.obj
+*.lib
+*.exe
+*.pdb
+*.ilk
+*.spv
+
+# Editors
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Local runs
+/private/
+*.log

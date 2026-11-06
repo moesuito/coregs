@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 patch from the GLM (TASK-027 core rewrite, CORE2-SPEC 4.1). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec/CORE2-SPEC.md and chapter 04.9, clean room (decision 0070).
+//
+// core2_patch.comp with the stored words read on the GPU from the GLM (the GPU copy of GS memory) with the dirty
+// rectangle's own addressing (base, width, format), so an EE upload into a target costs no CPU read. Every output
+// pixel of native pixel N's s x s block takes N's word (nearest, 8.2); only the bits in `mask` are written.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 3, r32ui) uniform uimage2D target;
+
+layout(push_constant) uniform PatchParameters {
+    uint bp;      // the target's base, width and the format the words are read in
+    uint bw;
+    uint psm;
+    uint x0;      // native rectangle
+    uint y0;
+    uint width;
+    uint height;
+    uint scale;
+    uint mask;
+} pc;
+
+void main() {
+    uvec2 local = gl_GlobalInvocationID.xy;
+    if (local.x >= pc.width * pc.scale || local.y >= pc.height * pc.scale) {
+        return;
+    }
+    uvec2 native = uvec2(pc.x0, pc.y0) + local / pc.scale;
+    ivec2 pixel = ivec2(pc.x0 * pc.scale + local.x, pc.y0 * pc.scale + local.y);
+    if (pixel.x >= imageSize(target).x || pixel.y >= imageSize(target).y) {
+        return;
+    }
+    uint word = glm_read(pc.bp, pc.bw, pc.psm, native.x & 2047u, native.y & 2047u);
+    uint stored = pc.mask == 0xFFFFFFFFu ? word : (imageLoad(target, pixel).x & ~pc.mask) | (word & pc.mask);
+    imageStore(target, pixel, uvec4(stored, 0u, 0u, 0u));
+}

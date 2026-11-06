@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 GT4 channel-shuffle hook (TASK-027 core rewrite, CORE2-SPEC 7.2 and its addendum). Copyright (c) 2026
+// GT4Recomp contributors. Written from docs/hw-renderer-spec/CORE2-SPEC.md and chapter 09.4, clean room
+// (decision 0070).
+//
+// GT4's race colour filter as one pass at the internal scale, in place on the filtered 32/24-bit target:
+// R' = palette[R].r, G' = palette[G].g, B' = palette[B].b, alpha kept (the write mask is always RGB only). The
+// palette is the CLUT captured at the first draw of the game's shuffle sequence, 256 RGBA8 entries.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer TonePalette {
+    uint palette[256];
+};
+layout(set = 0, binding = 1, r32ui) uniform uimage2D target;
+
+layout(push_constant) uniform ToneParameters {
+    uint width;   // output pixels of the target's native rectangle at scale
+    uint height;
+} pc;
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (pixel.x >= int(pc.width) || pixel.y >= int(pc.height) || pixel.x >= imageSize(target).x ||
+        pixel.y >= imageSize(target).y) {
+        return;
+    }
+    uint word = imageLoad(target, pixel).x;
+    uint r = palette[word & 0xFFu] & 0xFFu;
+    uint g = (palette[(word >> 8) & 0xFFu] >> 8) & 0xFFu;
+    uint b = (palette[(word >> 16) & 0xFFu] >> 16) & 0xFFu;
+    imageStore(target, pixel, uvec4((word & 0xFF000000u) | r | (g << 8) | (b << 16), 0u, 0u, 0u));
+}

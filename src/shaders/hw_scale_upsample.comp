@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: MIT
+//
+// Scaled target refresh (TASK-027 M12, chapter 06.8, IN-371). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 06.2 and 06.8, clean room (decision 0070).
+//
+// CoreGS 2.0 keeps every resident target as exact 1x GS words (the authority for memory, the GLM and
+// readbacks) and, when COREGS_HW_SCALE > 1, a second image of the same words at s x s sub-pixels per native
+// pixel that only the presentation reads. Whenever the 1x image changes by anything other than a draw (a load
+// from the shadow memory or the GLM), the changed rectangle of the scaled image is refreshed from it here.
+// Draws reach the scaled image by being rasterised a second time at scale (IN-371), not through this kernel.
+//
+// IN-384 follow-up (Q-GSDX-COMPARISON section 6): the reference blits a 1x upload into a scaled target with
+// BILINEAR by default (nearest is an option) and always bilinear for depth; nearest keeps the source's 6-pixel
+// steps visible on a flat gradient at 6x. `linear` (push word 5) selects bilinear for the colour slots; the depth
+// slots stay nearest because their words are compared, not shown.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0, r32ui) uniform readonly uimage2D native_words;   // the 1x slot image
+layout(set = 0, binding = 1, r32ui) uniform writeonly uimage2D scaled_words;  // the s x slot image
+// IN-398: the slot that held the same memory under another view just before this load (the same set layout; the
+// target's own set when there is no carry). Its scaled block is kept where its 1x word equals the loaded one.
+layout(set = 1, binding = 0, r32ui) uniform readonly uimage2D carry_native;
+layout(set = 1, binding = 1, r32ui) uniform readonly uimage2D carry_scaled;
+
+layout(push_constant) uniform UpsampleParameters {
+    uint x0;      // native rectangle, inclusive origin
+    uint y0;
+    uint width;   // native pixels
+    uint height;
+    uint scale;   // s
+    uint linear;  // 1 = bilinear (colour), 0 = nearest (depth)
+    uint carry;   // IN-398: 1 = keep the carry slot's scaled block where its 1x word matches
+    uint carry_mask;  // the bits both views share (0x00FFFFFF when either is a 24-bit view)
+    uint carry_x0;    // the carry slot's valid native rectangle (inclusive)
+    uint carry_y0;
+    uint carry_x1;
+    uint carry_y1;
+} pc;
+
+uint channel(uint word, uint c) {
+    return (word >> (8u * c)) & 0xFFu;
+}
+
+// Bilinear over the four native neighbours, channel by channel (the packed word is R | G << 8 | B << 16 | A << 24).
+uint blend4(uint w00, uint w10, uint w01, uint w11, uint fx, uint fy) {
+    uint out_word = 0u;
+    for (uint c = 0u; c < 4u; ++c) {
+        uint a = channel(w00, c) * (16u - fx) * (16u - fy);
+        uint b = channel(w10, c) * fx * (16u - fy);
+        uint d = channel(w01, c) * (16u - fx) * fy;
+        uint e = channel(w11, c) * fx * fy;
+        out_word |= ((a + b + d + e) >> 8) << (8u * c);
+    }
+    return out_word;
+}
+
+void main() {
+    uvec2 sub = gl_GlobalInvocationID.xy;  // scaled pixel relative to the rectangle's scaled origin
+    if (sub.x >= pc.width * pc.scale || sub.y >= pc.height * pc.scale) {
+        return;
+    }
+    uvec2 native = uvec2(pc.x0, pc.y0) + sub / pc.scale;
+    uint word = imageLoad(native_words, ivec2(native)).x;
+    ivec2 target = ivec2(uvec2(pc.x0, pc.y0) * pc.scale + sub);
+    // IN-398 (SCALE-ONLY-PLAN S1): GT4 reads its race frame as CT32 and CT24 in turn, and every view change reloaded
+    // the target from 1x words, so the picture showed 1x patches. Where the previous view's 1x word equals the
+    // loaded one in the shared bits, its scaled block is still the right picture of that memory: keep it, with the
+    // loaded word's own bits outside the shared mask (a 24-bit view's top byte).
+    if (pc.carry != 0u && native.x >= pc.carry_x0 && native.x <= pc.carry_x1 && native.y >= pc.carry_y0 &&
+        native.y <= pc.carry_y1 && ((imageLoad(carry_native, ivec2(native)).x ^ word) & pc.carry_mask) == 0u) {
+        uint kept = imageLoad(carry_scaled, target).x;
+        imageStore(scaled_words, target, uvec4((kept & pc.carry_mask) | (word & ~pc.carry_mask), 0u, 0u, 0u));
+        return;
+    }
+    if (pc.linear != 0u) {
+        const ivec2 last = ivec2(int(pc.x0) + int(pc.width) - 1, int(pc.y0) + int(pc.height) - 1);
+        const ivec2 here = ivec2(native);
+        const uint fx = (sub.x % pc.scale) * 16u / pc.scale;
+        const uint fy = (sub.y % pc.scale) * 16u / pc.scale;
+        word = blend4(word, imageLoad(native_words, min(here + ivec2(1, 0), last)).x,
+                      imageLoad(native_words, min(here + ivec2(0, 1), last)).x,
+                      imageLoad(native_words, min(here + ivec2(1, 1), last)).x, min(fx, 15u), min(fy, 15u));
+    }
+    imageStore(scaled_words, target, uvec4(word, 0u, 0u, 0u));
+}

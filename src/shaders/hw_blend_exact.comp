@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+//
+// HWR exactness entry point: blend equation sweep (TASK-027, M4). Copyright (c) 2026 GT4Recomp contributors.
+//
+// Written from docs/hw-renderer-spec (chapter 08.1, 08.4, 08.5), clean room (decision 0069).
+// Case index decoding mirrors the 81-mode sweep of native/hw_gs/pixel/hw_gs_pixel_fixture.cpp:
+//   index = ((((mode * 2 + clamp) * 256 + cs) * 256 + cd) * 2 + ai) * 2 + di
+// with mode = a + 3 b + 9 c + 27 d (selectors), clamp 0 wrap / 1 clamp, ai picks As 0x40 or 0xFF,
+// di picks Ad 0x00 or 0x80, FIX 0x81. Each invocation writes the red channel result.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_pixel_core.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(std430, set = 0, binding = 0) writeonly buffer BlendOutput {
+    uint results[];
+};
+
+layout(push_constant) uniform SweepPush {
+    uint base;   // first case index of this dispatch
+    uint count;  // number of cases in this dispatch
+} pc;
+
+void main() {
+    uint local = gl_GlobalInvocationID.x;
+    if (local >= pc.count) {
+        return;
+    }
+    uint index = pc.base + local;
+    uint di = index & 1u;
+    uint ai = (index >> 1) & 1u;
+    uint cd = (index >> 2) & 255u;
+    uint cs = (index >> 10) & 255u;
+    uint clamp_enable = (index >> 18) & 1u;
+    uint mode = index >> 19;
+
+    uint sel_a = mode % 3u;
+    uint sel_b = (mode / 3u) % 3u;
+    uint sel_c = (mode / 9u) % 3u;
+    uint sel_d = mode / 27u;
+
+    int as = ai == 0u ? 0x40 : 0xFF;
+    int ad = di == 0u ? 0x00 : 0x80;
+    int factor = hw_blend_factor(sel_c, as, ad, 0x81u);
+    int value = hw_blend_channel(sel_a, sel_b, sel_c, sel_d, factor, int(cs), int(cd));
+    results[local] = uint(hw_colour_clamp_or_wrap(value, clamp_enable != 0u));
+}

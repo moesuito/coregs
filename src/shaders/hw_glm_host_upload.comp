@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: MIT
+//
+// EE->GS upload into the GLM (TASK-027 M7/M10, chapters 01.4, 02.7 and 04.9, IN-351). Copyright (c) 2026
+// GT4Recomp contributors. Written from docs/hw-renderer-spec chapters 01.4, 02.7, 04.9 and 10, clean room
+// (decision 0070).
+//
+// One invocation per transferred pixel: pixel i of the rectangle (row-major, TRXPOS/TRXREG) takes bits
+// [i * bpp, i * bpp + bpp) of the host data (a little-endian bit stream: 4-bit texels low nibble first, 24-bit
+// texels three bytes) and is written into the GLM at the destination (BP, BW, PSM) with only its own bits, as
+// LocalMemory::writePixel does. The caller only sends rectangles whose pixels have distinct addresses (no row
+// wrap inside the buffer width), so the parallel writes need no ordering.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 64) in;
+
+layout(std430, set = 0, binding = 2) readonly buffer UploadRing {
+    uint upload_words[];  // the host data, padded to whole words
+};
+
+layout(push_constant) uniform UploadParameters {
+    uint bp;
+    uint bw;
+    uint psm;
+    uint x0;      // TRXPOS destination
+    uint y0;
+    uint width;   // TRXREG
+    uint pixels;  // pixels present in the data (a partial transfer may end inside the rectangle)
+    uint bpp;     // host bits per pixel: 32, 24, 16, 8 or 4
+    uint base;    // first word of the data in the ring
+} pc;
+
+uint host_texel(uint index) {
+    uint first_bit = index * pc.bpp;
+    uint word = pc.base + (first_bit >> 5);
+    uint shift = first_bit & 31u;
+    uint value = upload_words[word] >> shift;
+    if (shift + pc.bpp > 32u) {
+        value |= upload_words[word + 1u] << (32u - shift);
+    }
+    return pc.bpp >= 32u ? value : (value & ((1u << pc.bpp) - 1u));
+}
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= pc.pixels) {
+        return;
+    }
+    uint x = (pc.x0 + index % pc.width) % 2048u;
+    uint y = (pc.y0 + index / pc.width) % 2048u;
+    glm_write(pc.bp, pc.bw, pc.psm, x, y, host_texel(index));
+}

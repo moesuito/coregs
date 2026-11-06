@@ -1,0 +1,145 @@
+// MIT License. Copyright (c) 2026 João Alano and GT4Recomp contributors.
+// Written from the Vulkan specification.
+//
+// Device-level and physical-device-level entry points used by the GPU drawer. Same discipline as
+// hw_gs_vulkan_loader.hpp: every call goes through a pointer resolved at run time, and the names are
+// renamed to coregs_hwd_* by the macros below. Include hw_gs_vulkan_loader.hpp first (it includes
+// vulkan.h).
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include "hw_gs_vulkan_loader.hpp"
+
+#define vkAllocateDescriptorSets coregs_hwd_vkAllocateDescriptorSets
+#define vkAllocateMemory coregs_hwd_vkAllocateMemory
+#define vkBindBufferMemory coregs_hwd_vkBindBufferMemory
+#define vkBindImageMemory coregs_hwd_vkBindImageMemory
+#define vkCmdBeginRenderPass coregs_hwd_vkCmdBeginRenderPass
+#define vkCmdBindDescriptorSets coregs_hwd_vkCmdBindDescriptorSets
+#define vkCmdBindPipeline coregs_hwd_vkCmdBindPipeline
+#define vkCmdBindVertexBuffers coregs_hwd_vkCmdBindVertexBuffers
+#define vkCmdBlitImage coregs_hwd_vkCmdBlitImage
+#define vkCmdClearColorImage coregs_hwd_vkCmdClearColorImage
+#define vkCmdCopyBufferToImage coregs_hwd_vkCmdCopyBufferToImage
+#define vkCmdCopyImage coregs_hwd_vkCmdCopyImage
+#define vkCreateComputePipelines coregs_hwd_vkCreateComputePipelines
+#define vkCreatePipelineCache coregs_hwd_vkCreatePipelineCache
+#define vkDestroyPipelineCache coregs_hwd_vkDestroyPipelineCache
+#define vkGetPipelineCacheData coregs_hwd_vkGetPipelineCacheData
+#define vkCmdDispatch coregs_hwd_vkCmdDispatch
+#define vkCmdCopyBuffer coregs_hwd_vkCmdCopyBuffer
+#define vkCmdCopyImageToBuffer coregs_hwd_vkCmdCopyImageToBuffer
+#define vkCmdDraw coregs_hwd_vkCmdDraw
+#define vkCmdEndRenderPass coregs_hwd_vkCmdEndRenderPass
+#define vkCmdPushConstants coregs_hwd_vkCmdPushConstants
+#define vkCmdSetScissor coregs_hwd_vkCmdSetScissor
+#define vkCmdSetViewport coregs_hwd_vkCmdSetViewport
+#define vkCreateBuffer coregs_hwd_vkCreateBuffer
+#define vkCreateDescriptorPool coregs_hwd_vkCreateDescriptorPool
+#define vkCreateDescriptorSetLayout coregs_hwd_vkCreateDescriptorSetLayout
+#define vkCreateFramebuffer coregs_hwd_vkCreateFramebuffer
+#define vkCreateGraphicsPipelines coregs_hwd_vkCreateGraphicsPipelines
+#define vkCreateImage coregs_hwd_vkCreateImage
+#define vkCreateImageView coregs_hwd_vkCreateImageView
+#define vkCreatePipelineLayout coregs_hwd_vkCreatePipelineLayout
+#define vkCreateRenderPass coregs_hwd_vkCreateRenderPass
+#define vkCreateSampler coregs_hwd_vkCreateSampler
+#define vkDestroySampler coregs_hwd_vkDestroySampler
+#define vkCreateShaderModule coregs_hwd_vkCreateShaderModule
+#define vkDestroyBuffer coregs_hwd_vkDestroyBuffer
+#define vkDestroyDescriptorPool coregs_hwd_vkDestroyDescriptorPool
+#define vkDestroyDescriptorSetLayout coregs_hwd_vkDestroyDescriptorSetLayout
+#define vkDestroyFramebuffer coregs_hwd_vkDestroyFramebuffer
+#define vkDestroyImage coregs_hwd_vkDestroyImage
+#define vkDestroyImageView coregs_hwd_vkDestroyImageView
+#define vkDestroyPipeline coregs_hwd_vkDestroyPipeline
+#define vkDestroyPipelineLayout coregs_hwd_vkDestroyPipelineLayout
+#define vkDestroyRenderPass coregs_hwd_vkDestroyRenderPass
+#define vkDestroyShaderModule coregs_hwd_vkDestroyShaderModule
+#define vkFreeMemory coregs_hwd_vkFreeMemory
+#define vkGetBufferMemoryRequirements coregs_hwd_vkGetBufferMemoryRequirements
+#define vkGetImageMemoryRequirements coregs_hwd_vkGetImageMemoryRequirements
+#define vkGetPhysicalDeviceMemoryProperties coregs_hwd_vkGetPhysicalDeviceMemoryProperties
+#define vkMapMemory coregs_hwd_vkMapMemory
+#define vkUnmapMemory coregs_hwd_vkUnmapMemory
+#define vkUpdateDescriptorSets coregs_hwd_vkUpdateDescriptorSets
+#define vkResetDescriptorPool coregs_hwd_vkResetDescriptorPool
+#define vkCreateQueryPool coregs_hwd_vkCreateQueryPool
+#define vkDestroyQueryPool coregs_hwd_vkDestroyQueryPool
+#define vkCmdResetQueryPool coregs_hwd_vkCmdResetQueryPool
+#define vkCmdWriteTimestamp coregs_hwd_vkCmdWriteTimestamp
+#define vkGetQueryPoolResults coregs_hwd_vkGetQueryPoolResults
+#define vkCmdBeginQuery coregs_hwd_vkCmdBeginQuery
+#define vkCmdEndQuery coregs_hwd_vkCmdEndQuery
+
+inline PFN_vkAllocateDescriptorSets coregs_hwd_vkAllocateDescriptorSets = nullptr;
+inline PFN_vkAllocateMemory coregs_hwd_vkAllocateMemory = nullptr;
+inline PFN_vkBindBufferMemory coregs_hwd_vkBindBufferMemory = nullptr;
+inline PFN_vkBindImageMemory coregs_hwd_vkBindImageMemory = nullptr;
+inline PFN_vkCmdBeginRenderPass coregs_hwd_vkCmdBeginRenderPass = nullptr;
+inline PFN_vkCreateSampler coregs_hwd_vkCreateSampler = nullptr;
+inline PFN_vkDestroySampler coregs_hwd_vkDestroySampler = nullptr;
+inline PFN_vkCmdBindDescriptorSets coregs_hwd_vkCmdBindDescriptorSets = nullptr;
+inline PFN_vkCmdBindPipeline coregs_hwd_vkCmdBindPipeline = nullptr;
+inline PFN_vkCmdBindVertexBuffers coregs_hwd_vkCmdBindVertexBuffers = nullptr;
+inline PFN_vkCmdBlitImage coregs_hwd_vkCmdBlitImage = nullptr;
+inline PFN_vkCmdClearColorImage coregs_hwd_vkCmdClearColorImage = nullptr;
+inline PFN_vkCmdCopyBufferToImage coregs_hwd_vkCmdCopyBufferToImage = nullptr;
+inline PFN_vkCmdCopyImage coregs_hwd_vkCmdCopyImage = nullptr;
+inline PFN_vkCreateComputePipelines coregs_hwd_vkCreateComputePipelines = nullptr;
+inline PFN_vkCreatePipelineCache coregs_hwd_vkCreatePipelineCache = nullptr;
+inline PFN_vkDestroyPipelineCache coregs_hwd_vkDestroyPipelineCache = nullptr;
+inline PFN_vkGetPipelineCacheData coregs_hwd_vkGetPipelineCacheData = nullptr;
+inline PFN_vkCmdDispatch coregs_hwd_vkCmdDispatch = nullptr;
+inline PFN_vkCmdCopyBuffer coregs_hwd_vkCmdCopyBuffer = nullptr;
+inline PFN_vkCmdCopyImageToBuffer coregs_hwd_vkCmdCopyImageToBuffer = nullptr;
+inline PFN_vkCmdDraw coregs_hwd_vkCmdDraw = nullptr;
+inline PFN_vkCmdEndRenderPass coregs_hwd_vkCmdEndRenderPass = nullptr;
+inline PFN_vkCmdPushConstants coregs_hwd_vkCmdPushConstants = nullptr;
+inline PFN_vkCmdSetScissor coregs_hwd_vkCmdSetScissor = nullptr;
+inline PFN_vkCmdSetViewport coregs_hwd_vkCmdSetViewport = nullptr;
+inline PFN_vkCreateBuffer coregs_hwd_vkCreateBuffer = nullptr;
+inline PFN_vkCreateDescriptorPool coregs_hwd_vkCreateDescriptorPool = nullptr;
+inline PFN_vkCreateDescriptorSetLayout coregs_hwd_vkCreateDescriptorSetLayout = nullptr;
+inline PFN_vkCreateFramebuffer coregs_hwd_vkCreateFramebuffer = nullptr;
+inline PFN_vkCreateGraphicsPipelines coregs_hwd_vkCreateGraphicsPipelines = nullptr;
+inline PFN_vkCreateImage coregs_hwd_vkCreateImage = nullptr;
+inline PFN_vkCreateImageView coregs_hwd_vkCreateImageView = nullptr;
+inline PFN_vkCreatePipelineLayout coregs_hwd_vkCreatePipelineLayout = nullptr;
+inline PFN_vkCreateRenderPass coregs_hwd_vkCreateRenderPass = nullptr;
+inline PFN_vkCreateShaderModule coregs_hwd_vkCreateShaderModule = nullptr;
+inline PFN_vkDestroyBuffer coregs_hwd_vkDestroyBuffer = nullptr;
+inline PFN_vkDestroyDescriptorPool coregs_hwd_vkDestroyDescriptorPool = nullptr;
+inline PFN_vkDestroyDescriptorSetLayout coregs_hwd_vkDestroyDescriptorSetLayout = nullptr;
+inline PFN_vkDestroyFramebuffer coregs_hwd_vkDestroyFramebuffer = nullptr;
+inline PFN_vkDestroyImage coregs_hwd_vkDestroyImage = nullptr;
+inline PFN_vkDestroyImageView coregs_hwd_vkDestroyImageView = nullptr;
+inline PFN_vkDestroyPipeline coregs_hwd_vkDestroyPipeline = nullptr;
+inline PFN_vkDestroyPipelineLayout coregs_hwd_vkDestroyPipelineLayout = nullptr;
+inline PFN_vkDestroyRenderPass coregs_hwd_vkDestroyRenderPass = nullptr;
+inline PFN_vkDestroyShaderModule coregs_hwd_vkDestroyShaderModule = nullptr;
+inline PFN_vkFreeMemory coregs_hwd_vkFreeMemory = nullptr;
+inline PFN_vkGetBufferMemoryRequirements coregs_hwd_vkGetBufferMemoryRequirements = nullptr;
+inline PFN_vkGetImageMemoryRequirements coregs_hwd_vkGetImageMemoryRequirements = nullptr;
+inline PFN_vkGetPhysicalDeviceMemoryProperties coregs_hwd_vkGetPhysicalDeviceMemoryProperties = nullptr;
+inline PFN_vkMapMemory coregs_hwd_vkMapMemory = nullptr;
+inline PFN_vkUnmapMemory coregs_hwd_vkUnmapMemory = nullptr;
+inline PFN_vkUpdateDescriptorSets coregs_hwd_vkUpdateDescriptorSets = nullptr;
+inline PFN_vkResetDescriptorPool coregs_hwd_vkResetDescriptorPool = nullptr;  // CORE2
+inline PFN_vkCreateQueryPool coregs_hwd_vkCreateQueryPool = nullptr;
+inline PFN_vkDestroyQueryPool coregs_hwd_vkDestroyQueryPool = nullptr;
+inline PFN_vkCmdResetQueryPool coregs_hwd_vkCmdResetQueryPool = nullptr;
+inline PFN_vkCmdWriteTimestamp coregs_hwd_vkCmdWriteTimestamp = nullptr;
+inline PFN_vkGetQueryPoolResults coregs_hwd_vkGetQueryPoolResults = nullptr;
+inline PFN_vkCmdBeginQuery coregs_hwd_vkCmdBeginQuery = nullptr;  // CORE2 B4: pipeline statistics
+inline PFN_vkCmdEndQuery coregs_hwd_vkCmdEndQuery = nullptr;
+
+namespace coregs::vulkan_device {
+
+// Resolves every pointer above through vkGetInstanceProcAddr (taken from the loaded vulkan-1.dll),
+// which also resolves device-level names. Missing names are listed; returns true when none is missing.
+bool load_device_entry_points(VkInstance instance, std::vector<std::string> &missing);
+
+} // namespace coregs::vulkan_device

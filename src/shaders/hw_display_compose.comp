@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: MIT
+//
+// Display compose on the GPU (TASK-027 M6/M17, chapter 13.3, IN-364). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 13.2 and 13.3, clean room (decision 0070).
+//
+// One invocation per output pixel of a progressive presentation frame: the same arithmetic as the CPU
+// display::compose_merge over the circuits' read rectangles, read straight from the GLM (made current for them by
+// the caller) instead of a downloaded copy. Background first, then RC2 (copied), then RC1 (blended with the merge
+// alpha), nearest sampling of each circuit's read rectangle into its placement. The CPU decides the plan, the
+// output size and the placements; interlaced frames (field offset, deinterlace) stay on the CPU path.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(std430, set = 0, binding = 2) readonly buffer ComposeRing {
+    uint compose_words[];  // the parameter block at pc.base (layout below)
+};
+layout(set = 0, binding = 4, r32ui) uniform writeonly uimage2D hw_display;
+
+layout(push_constant) uniform ComposeParameters {
+    uint base;
+    uint out_width;
+    uint out_height;
+} pc;
+
+// Parameter block: [0] background RGBA8, [1] merge alpha (min(ALP, 255)), [2] MMOD, [3] use RC1, [4] use RC2,
+// then per circuit (RC1 at 5, RC2 at 17): bp, bw, psm, format (0 CT32, 1 CT24, 2 CT16), dbx, dby, read width,
+// read height, x0, y0, w, h (x0/y0 as signed integers).
+uint param(uint index) {
+    return compose_words[pc.base + index];
+}
+
+// The stored word of one circuit texel turned into RGBA8 (pixel::unpack_frame_word + frame_word_to_colour; CT24
+// alpha 0x80, IN-313).
+uvec4 circuit_texel(uint c, uint sx, uint sy) {
+    uint bp = param(c + 0u);
+    uint bw = param(c + 1u);
+    uint psm = param(c + 2u);
+    uint format = param(c + 3u);
+    uint x = uint(int(param(c + 4u)) + int(sx)) & 2047u;
+    uint y = uint(int(param(c + 5u)) + int(sy)) & 2047u;
+    uint stored = glm_read(bp, bw, psm, x, y);
+    uint word = stored;
+    if (format == 1u) {
+        word = stored & 0x00FFFFFFu;
+    } else if (format == 2u) {
+        uint r = stored & 0x1Fu;
+        uint g = (stored >> 5) & 0x1Fu;
+        uint b = (stored >> 10) & 0x1Fu;
+        uint a = (stored >> 15) & 1u;
+        word = (r << 3) | (g << 11) | (b << 19) | (a << 31);
+    }
+    uvec4 colour = uvec4(word & 0xFFu, (word >> 8) & 0xFFu, (word >> 16) & 0xFFu, (word >> 24) & 0xFFu);
+    if (format == 1u) {
+        colour.a = 0x80u;
+    }
+    return colour;
+}
+
+// Whether output pixel (x, y) lies in the circuit's placement; then the nearest source texel.
+bool sample_circuit(uint c, int x, int y, out uvec4 texel) {
+    int x0 = int(param(c + 8u));
+    int y0 = int(param(c + 9u));
+    int w = int(param(c + 10u));
+    int h = int(param(c + 11u));
+    uint srcw = param(c + 6u);
+    uint srch = param(c + 7u);
+    texel = uvec4(0u);
+    if (w <= 0 || h <= 0 || srcw == 0u || srch == 0u) {
+        return false;
+    }
+    if (x < max(0, x0) || x >= min(int(pc.out_width), x0 + w) || y < max(0, y0) || y >= min(int(pc.out_height), y0 + h)) {
+        return false;
+    }
+    uint sx = min(uint(x - x0) * srcw / uint(w), srcw - 1u);
+    uint sy = min(uint(y - y0) * srch / uint(h), srch - 1u);
+    texel = circuit_texel(c, sx, sy);
+    return true;
+}
+
+uint blend_channel(uint src, uint dst, uint a) {
+    return (src * a + dst * (255u - a) + 127u) / 255u;
+}
+
+void main() {
+    uvec2 pixel = gl_GlobalInvocationID.xy;
+    if (pixel.x >= pc.out_width || pixel.y >= pc.out_height) {
+        return;
+    }
+    uint bg = param(0u);
+    uvec4 out_colour = uvec4(bg & 0xFFu, (bg >> 8) & 0xFFu, (bg >> 16) & 0xFFu, (bg >> 24) & 0xFFu);
+    int x = int(pixel.x);
+    int y = int(pixel.y);
+    uvec4 texel;
+    if (param(4u) != 0u && sample_circuit(17u, x, y, texel)) {
+        out_colour = texel;
+    }
+    if (param(3u) != 0u && sample_circuit(5u, x, y, texel)) {
+        uint a = param(2u) != 0u ? param(1u) : min(255u, texel.a * 2u);
+        out_colour.r = blend_channel(texel.r, out_colour.r, a);
+        out_colour.g = blend_channel(texel.g, out_colour.g, a);
+        out_colour.b = blend_channel(texel.b, out_colour.b, a);
+        out_colour.a = texel.a;
+    }
+    imageStore(hw_display, ivec2(pixel),
+               uvec4(out_colour.r | (out_colour.g << 8) | (out_colour.b << 16) | (out_colour.a << 24), 0u, 0u, 0u));
+}

@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: MIT
+//
+// GLM target swizzle (TASK-027 M10, chapter 04.9 step 2, IN-347). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 04.9 and 10, clean room (decision 0070).
+//
+// One invocation per pixel of a resident target's rectangle: the target image holds the stored words of its
+// own (BP, BW, PSM) layout at 1x (the same values a write-back would store), and they are written into the GLM
+// at that layout's addresses, only the pixel's bits. Afterwards the GLM holds what the shadow memory would hold
+// after a write-back of that rectangle.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 4, r32ui) uniform readonly uimage2D hw_target;
+
+layout(push_constant) uniform SwizzleParameters {
+    uint bp;    // target base in blocks
+    uint bw;
+    uint psm;
+    uint x0;    // rectangle in target pixels
+    uint y0;
+    uint width;
+    uint height;
+} pc;
+
+void main() {
+    uvec2 local = gl_GlobalInvocationID.xy;
+    if (local.x >= pc.width || local.y >= pc.height) {
+        return;
+    }
+    uint x = pc.x0 + local.x;
+    uint y = pc.y0 + local.y;
+    uint value = imageLoad(hw_target, ivec2(x, y)).x;
+    glm_write(pc.bp, pc.bw, pc.psm, x, y, value);
+}

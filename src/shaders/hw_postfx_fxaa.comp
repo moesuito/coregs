@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: MIT
+//
+// Edge-only fast approximate anti-aliasing of the presentation frame (TASK-027 M12/M15, chapter 13.5, IN-376).
+// Copyright (c) 2026 GT4Recomp contributors. Written from docs/hw-renderer-spec chapter 13.5, clean room
+// (decision 0070); our own implementation of the generally documented luma-edge method (13.5 allows "our own").
+//
+// One invocation per output pixel of the composed frame (RGBA8 packed in R32_UINT, red in the low byte):
+//   1. local contrast from the luma of the pixel and its four neighbours; low-contrast pixels are copied unchanged
+//      (edge-only: no sub-pixel aliasing pass, 13.5 "subpixel amount 0");
+//   2. edge orientation from the 3 x 3 luma second differences, and the side of the edge (the steeper neighbour);
+//   3. a search along the edge in both directions, on the line half a pixel towards that side, until the average
+//      luma leaves the local average by a quarter of the gradient (at most kSearchSteps pixels each way);
+//   4. the pixel is blended with its neighbour across the edge by its distance to the nearer edge end
+//      (0.5 at an end, 0 in the middle), only when the luma at that end varies the same way as at the pixel.
+// Alpha is kept. The frame is read from `source_frame` and written to `fxaa_frame` (no in-place hazard).
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0, r32ui) uniform readonly uimage2D source_frame;
+layout(set = 0, binding = 1, r32ui) uniform writeonly uimage2D fxaa_frame;
+
+layout(push_constant) uniform FxaaParameters {
+    uint width;
+    uint height;
+} pc;
+
+const float kEdgeThreshold = 0.125;     // contrast relative to the brightest of the five pixels
+const float kEdgeThresholdMin = 0.0312; // absolute contrast floor (dark areas)
+const int kSearchSteps = 12;
+
+ivec2 clamp_pixel(ivec2 p) {
+    return clamp(p, ivec2(0), ivec2(int(pc.width) - 1, int(pc.height) - 1));
+}
+
+vec4 colour_at(ivec2 p) {
+    uint word = imageLoad(source_frame, clamp_pixel(p)).x;
+    return vec4(float(word & 0xFFu), float((word >> 8) & 0xFFu), float((word >> 16) & 0xFFu), float(word >> 24)) / 255.0;
+}
+
+float luma_at(ivec2 p) {
+    vec3 c = colour_at(p).rgb;
+    return dot(c, vec3(0.299, 0.587, 0.114));
+}
+
+uint pack_colour(vec4 c) {
+    uvec4 v = uvec4(clamp(floor(c * 255.0 + 0.5), 0.0, 255.0));
+    return v.r | (v.g << 8) | (v.b << 16) | (v.a << 24);
+}
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (p.x >= int(pc.width) || p.y >= int(pc.height)) {
+        return;
+    }
+    vec4 centre = colour_at(p);
+    float lumaM = dot(centre.rgb, vec3(0.299, 0.587, 0.114));
+    float lumaN = luma_at(p + ivec2(0, -1));
+    float lumaS = luma_at(p + ivec2(0, 1));
+    float lumaW = luma_at(p + ivec2(-1, 0));
+    float lumaE = luma_at(p + ivec2(1, 0));
+    float lumaMax = max(lumaM, max(max(lumaN, lumaS), max(lumaW, lumaE)));
+    float lumaMin = min(lumaM, min(min(lumaN, lumaS), min(lumaW, lumaE)));
+    float range = lumaMax - lumaMin;
+    if (range < max(kEdgeThresholdMin, lumaMax * kEdgeThreshold)) {
+        imageStore(fxaa_frame, p, uvec4(imageLoad(source_frame, p).x, 0u, 0u, 0u));
+        return;
+    }
+
+    float lumaNW = luma_at(p + ivec2(-1, -1));
+    float lumaNE = luma_at(p + ivec2(1, -1));
+    float lumaSW = luma_at(p + ivec2(-1, 1));
+    float lumaSE = luma_at(p + ivec2(1, 1));
+    // A horizontal edge changes along y: second differences across rows dominate.
+    float edgeHorizontal = abs(lumaNW + lumaSW - 2.0 * lumaW) + 2.0 * abs(lumaN + lumaS - 2.0 * lumaM) +
+                           abs(lumaNE + lumaSE - 2.0 * lumaE);
+    float edgeVertical = abs(lumaNW + lumaNE - 2.0 * lumaN) + 2.0 * abs(lumaW + lumaE - 2.0 * lumaM) +
+                         abs(lumaSW + lumaSE - 2.0 * lumaS);
+    bool horizontal = edgeHorizontal >= edgeVertical;
+
+    // The two neighbours across the edge and the steeper side.
+    float luma1 = horizontal ? lumaN : lumaW;
+    float luma2 = horizontal ? lumaS : lumaE;
+    float gradient1 = abs(luma1 - lumaM);
+    float gradient2 = abs(luma2 - lumaM);
+    bool towardsFirst = gradient1 >= gradient2;
+    ivec2 across = horizontal ? ivec2(0, towardsFirst ? -1 : 1) : ivec2(towardsFirst ? -1 : 1, 0);
+    ivec2 along = horizontal ? ivec2(1, 0) : ivec2(0, 1);
+    float lumaNeighbour = towardsFirst ? luma1 : luma2;
+    float localAverage = 0.5 * (lumaNeighbour + lumaM);
+    float gradientScaled = 0.25 * max(gradient1, gradient2);
+
+    // Walk both ways on the half-pixel line between this row (column) and the neighbour's.
+    float endNegative = 0.0;
+    float endPositive = 0.0;
+    int stepsNegative = kSearchSteps;
+    int stepsPositive = kSearchSteps;
+    bool doneNegative = false;
+    bool donePositive = false;
+    for (int i = 1; i <= kSearchSteps; ++i) {
+        if (!doneNegative) {
+            ivec2 q = p - along * i;
+            endNegative = 0.5 * (luma_at(q) + luma_at(q + across)) - localAverage;
+            if (abs(endNegative) >= gradientScaled) {
+                doneNegative = true;
+                stepsNegative = i;
+            }
+        }
+        if (!donePositive) {
+            ivec2 q = p + along * i;
+            endPositive = 0.5 * (luma_at(q) + luma_at(q + across)) - localAverage;
+            if (abs(endPositive) >= gradientScaled) {
+                donePositive = true;
+                stepsPositive = i;
+            }
+        }
+        if (doneNegative && donePositive) {
+            break;
+        }
+    }
+    float distanceNegative = float(stepsNegative);
+    float distancePositive = float(stepsPositive);
+    bool negativeIsNearer = distanceNegative < distancePositive;
+    float nearest = min(distanceNegative, distancePositive);
+    float edgeLength = distanceNegative + distancePositive;
+    // Blend only when the luma at the nearer end varies the same way as at this pixel (the edge really ends there).
+    bool centreBelow = lumaM < localAverage;
+    bool endVariesBelow = (negativeIsNearer ? endNegative : endPositive) < 0.0;
+    float amount = centreBelow != endVariesBelow ? (0.5 - nearest / edgeLength) : 0.0;
+    amount = clamp(amount, 0.0, 0.5);
+
+    vec4 neighbour = colour_at(p + across);
+    vec4 result = vec4(mix(centre.rgb, neighbour.rgb, amount), centre.a);
+    imageStore(fxaa_frame, p, uvec4(pack_colour(result), 0u, 0u, 0u));
+}

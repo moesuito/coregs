@@ -1,0 +1,225 @@
+// SPDX-License-Identifier: MIT
+//
+// Presentation resampling of the composed frame to the window rectangle (TASK-027 CORE2 C2/C3, IN-432).
+// Copyright (c) 2026 GT4Recomp contributors.
+//
+// The EASU and RCAS passes follow the published design of AMD FidelityFX Super Resolution 1.0 (FSR1), which AMD
+// released under the MIT license:
+//   Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+//   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+//   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+//   the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+//   to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above
+//   copyright notice and this permission notice shall be included in all copies or substantial portions of the
+//   Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+// Written here in plain GLSL from that design (32-bit float only); no GPL source was used (decision 0070).
+//
+// One invocation per output pixel; frames are RGBA8 packed in R32_UINT (red in the low byte), as the compose kernel
+// writes them. `mode` picks the pass:
+//   0  horizontal Lanczos-2 resampling, source width -> destination width (rows unchanged);
+//   1  vertical Lanczos-2 resampling, source height -> destination height (columns unchanged);
+//      when shrinking, the kernel is widened by the ratio so every source pixel contributes (area-correct, no
+//      aliasing); the result is clamped to the samples of the main lobe (no ringing around the HUD);
+//   2  EASU, edge-adaptive upsampling (both axes grow): a 12-tap Lanczos-like kernel stretched along the local edge
+//      direction found from luma gradients, clamped to the 2 x 2 nearest pixels;
+//   3  RCAS, robust contrast-adaptive sharpening at the output size: a 5-tap cross whose negative lobe is limited
+//      per pixel so no channel leaves [0, 1]; `sharpness` is exp2(-stops) (1.0 = strongest).
+// Alpha is carried from the nearest source pixel.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0, r32ui) uniform readonly uimage2D source_frame;
+layout(set = 0, binding = 1, r32ui) uniform writeonly uimage2D output_frame;
+
+layout(push_constant) uniform PresentParameters {
+    uint source_width;
+    uint source_height;
+    uint output_width;
+    uint output_height;
+    uint mode;
+    float sharpness;
+} pc;
+
+vec4 colour_at(ivec2 p) {
+    p = clamp(p, ivec2(0), ivec2(int(pc.source_width) - 1, int(pc.source_height) - 1));
+    uint word = imageLoad(source_frame, p).x;
+    return vec4(float(word & 0xFFu), float((word >> 8) & 0xFFu), float((word >> 16) & 0xFFu), float(word >> 24)) / 255.0;
+}
+
+uint pack_colour(vec4 c) {
+    uvec4 v = uvec4(clamp(floor(c * 255.0 + 0.5), 0.0, 255.0));
+    return v.r | (v.g << 8) | (v.b << 16) | (v.a << 24);
+}
+
+const float kPi = 3.14159265358979;
+
+float lanczos2(float x) {
+    x = abs(x);
+    if (x < 1e-5) return 1.0;
+    if (x >= 2.0) return 0.0;
+    float px = kPi * x;
+    return 2.0 * sin(px) * sin(px * 0.5) / (px * px);
+}
+
+// Modes 0 and 1: one axis. `along` is the axis (0 x, 1 y).
+vec4 lanczos_axis(ivec2 out_pixel, int along) {
+    float source_size = float(along == 0 ? pc.source_width : pc.source_height);
+    float output_size = float(along == 0 ? pc.output_width : pc.output_height);
+    float ratio = source_size / output_size;
+    float widen = max(ratio, 1.0);
+    float centre = (float(along == 0 ? out_pixel.x : out_pixel.y) + 0.5) * ratio - 0.5;
+    int first = int(floor(centre - 2.0 * widen)) + 1;
+    int last = int(floor(centre + 2.0 * widen));
+    vec4 sum = vec4(0.0);
+    float weights = 0.0;
+    vec3 lobe_min = vec3(1.0), lobe_max = vec3(0.0);
+    for (int i = first; i <= last; ++i) {
+        float w = lanczos2((float(i) - centre) / widen);
+        ivec2 p = along == 0 ? ivec2(i, out_pixel.y) : ivec2(out_pixel.x, i);
+        vec4 c = colour_at(p);
+        sum += c * w;
+        weights += w;
+        if (abs(float(i) - centre) <= widen) {
+            lobe_min = min(lobe_min, c.rgb);
+            lobe_max = max(lobe_max, c.rgb);
+        }
+    }
+    vec4 result = sum / max(weights, 1e-6);
+    result.rgb = clamp(result.rgb, lobe_min, lobe_max);
+    ivec2 nearest = along == 0 ? ivec2(int(floor(centre + 0.5)), out_pixel.y) : ivec2(out_pixel.x, int(floor(centre + 0.5)));
+    result.a = colour_at(nearest).a;
+    return result;
+}
+
+// ---- Mode 2: EASU ------------------------------------------------------------------------------------------------
+
+float easu_luma(vec4 c) { return c.b * 0.5 + (c.r * 0.5 + c.g); }
+
+// Direction and edge length from one bilinear corner: a up, b left, c centre, d right, e down; `w` its weight.
+void easu_set(inout vec2 dir, inout float len, float w, float a, float b, float c, float d, float e) {
+    float dc = d - c, cb = c - b;
+    float len_x = max(abs(dc), abs(cb));
+    len_x = len_x > 0.0 ? 1.0 / len_x : 0.0;
+    float dir_x = d - b;
+    dir.x += dir_x * w;
+    len_x = clamp(abs(dir_x) * len_x, 0.0, 1.0);
+    len += len_x * len_x * w;
+    float ec = e - c, ca = c - a;
+    float len_y = max(abs(ec), abs(ca));
+    len_y = len_y > 0.0 ? 1.0 / len_y : 0.0;
+    float dir_y = e - a;
+    dir.y += dir_y * w;
+    len_y = clamp(abs(dir_y) * len_y, 0.0, 1.0);
+    len += len_y * len_y * w;
+}
+
+// One tap: offset from the sample point, rotated into the edge frame and scaled, then a windowed Lanczos-2
+// approximation (base 25/16 (2/5 x^2 - 1)^2 - (25/16 - 1), window (lob x^2 - 1)^2), clipped at the window end.
+void easu_tap(inout vec3 colour, inout float weight, vec2 offset, vec2 dir, vec2 len2, float lob, float clip, vec3 c) {
+    vec2 v = vec2(offset.x * dir.x + offset.y * dir.y, offset.x * -dir.y + offset.y * dir.x) * len2;
+    float d2 = min(v.x * v.x + v.y * v.y, clip);
+    float base = 2.0 / 5.0 * d2 - 1.0;
+    float window = lob * d2 - 1.0;
+    base *= base;
+    window *= window;
+    base = 25.0 / 16.0 * base - (25.0 / 16.0 - 1.0);
+    float w = base * window;
+    colour += c * w;
+    weight += w;
+}
+
+vec4 easu(ivec2 out_pixel) {
+    vec2 ratio = vec2(float(pc.source_width) / float(pc.output_width), float(pc.source_height) / float(pc.output_height));
+    vec2 pp = (vec2(out_pixel) + 0.5) * ratio - 0.5;
+    vec2 fp = floor(pp);
+    pp -= fp;
+    ivec2 o = ivec2(fp);
+    //    b c
+    //  e f g h
+    //  i j k l
+    //    n o
+    vec4 b = colour_at(o + ivec2(0, -1)), c = colour_at(o + ivec2(1, -1));
+    vec4 e = colour_at(o + ivec2(-1, 0)), f = colour_at(o), g = colour_at(o + ivec2(1, 0)), h = colour_at(o + ivec2(2, 0));
+    vec4 i = colour_at(o + ivec2(-1, 1)), j = colour_at(o + ivec2(0, 1)), k = colour_at(o + ivec2(1, 1));
+    vec4 l = colour_at(o + ivec2(2, 1));
+    vec4 n = colour_at(o + ivec2(0, 2)), oo = colour_at(o + ivec2(1, 2));
+    float bL = easu_luma(b), cL = easu_luma(c), eL = easu_luma(e), fL = easu_luma(f), gL = easu_luma(g);
+    float hL = easu_luma(h), iL = easu_luma(i), jL = easu_luma(j), kL = easu_luma(k), lL = easu_luma(l);
+    float nL = easu_luma(n), oL = easu_luma(oo);
+    vec2 dir = vec2(0.0);
+    float len = 0.0;
+    easu_set(dir, len, (1.0 - pp.x) * (1.0 - pp.y), bL, eL, fL, gL, jL);
+    easu_set(dir, len, pp.x * (1.0 - pp.y), cL, fL, gL, hL, kL);
+    easu_set(dir, len, (1.0 - pp.x) * pp.y, fL, iL, jL, kL, nL);
+    easu_set(dir, len, pp.x * pp.y, gL, jL, kL, lL, oL);
+    float dir_r = dir.x * dir.x + dir.y * dir.y;
+    bool zero = dir_r < 1.0 / 32768.0;
+    dir_r = zero ? 1.0 : inversesqrt(dir_r);
+    dir.x = zero ? 1.0 : dir.x;
+    dir *= dir_r;
+    len = len * 0.5;
+    len *= len;
+    float stretch = (dir.x * dir.x + dir.y * dir.y) / max(abs(dir.x), abs(dir.y));
+    vec2 len2 = vec2(1.0 + (stretch - 1.0) * len, 1.0 - 0.5 * len);
+    float lob = 0.5 + ((1.0 / 4.0 - 0.04) - 0.5) * len;
+    float clip = 1.0 / lob;
+    vec3 colour = vec3(0.0);
+    float weight = 0.0;
+    easu_tap(colour, weight, vec2(0.0, -1.0) - pp, dir, len2, lob, clip, b.rgb);
+    easu_tap(colour, weight, vec2(1.0, -1.0) - pp, dir, len2, lob, clip, c.rgb);
+    easu_tap(colour, weight, vec2(-1.0, 1.0) - pp, dir, len2, lob, clip, i.rgb);
+    easu_tap(colour, weight, vec2(0.0, 1.0) - pp, dir, len2, lob, clip, j.rgb);
+    easu_tap(colour, weight, vec2(0.0, 0.0) - pp, dir, len2, lob, clip, f.rgb);
+    easu_tap(colour, weight, vec2(-1.0, 0.0) - pp, dir, len2, lob, clip, e.rgb);
+    easu_tap(colour, weight, vec2(1.0, 1.0) - pp, dir, len2, lob, clip, k.rgb);
+    easu_tap(colour, weight, vec2(2.0, 1.0) - pp, dir, len2, lob, clip, l.rgb);
+    easu_tap(colour, weight, vec2(2.0, 0.0) - pp, dir, len2, lob, clip, h.rgb);
+    easu_tap(colour, weight, vec2(1.0, 0.0) - pp, dir, len2, lob, clip, g.rgb);
+    easu_tap(colour, weight, vec2(1.0, 2.0) - pp, dir, len2, lob, clip, oo.rgb);
+    easu_tap(colour, weight, vec2(0.0, 2.0) - pp, dir, len2, lob, clip, n.rgb);
+    vec3 lo = min(min(f.rgb, g.rgb), min(j.rgb, k.rgb));
+    vec3 hi = max(max(f.rgb, g.rgb), max(j.rgb, k.rgb));
+    vec3 result = clamp(colour / max(weight, 1e-6), lo, hi);
+    vec4 nearest = pp.y < 0.5 ? (pp.x < 0.5 ? f : g) : (pp.x < 0.5 ? j : k);
+    return vec4(result, nearest.a);
+}
+
+// ---- Mode 3: RCAS ------------------------------------------------------------------------------------------------
+
+const float kRcasLimit = 0.25 - 1.0 / 16.0;
+
+vec4 rcas(ivec2 p) {
+    //   b
+    // d e f
+    //   h
+    vec4 b = colour_at(p + ivec2(0, -1)), d = colour_at(p + ivec2(-1, 0)), e = colour_at(p);
+    vec4 f = colour_at(p + ivec2(1, 0)), h = colour_at(p + ivec2(0, 1));
+    vec3 mn4 = min(min(b.rgb, d.rgb), min(f.rgb, h.rgb));
+    vec3 mx4 = max(max(b.rgb, d.rgb), max(f.rgb, h.rgb));
+    // The lobe that keeps every channel in range: -min/(4 max) towards black, (1 - max)/(4 min - 4) towards white.
+    vec3 hit_min = min(mn4, e.rgb) / max(4.0 * mx4, vec3(1e-6));
+    vec3 hit_max = (1.0 - max(mx4, e.rgb)) / min(4.0 * mn4 - 4.0, vec3(-1e-6));
+    vec3 lobe_rgb = max(-hit_min, hit_max);
+    float lobe = max(-kRcasLimit, min(max(lobe_rgb.r, max(lobe_rgb.g, lobe_rgb.b)), 0.0)) * pc.sharpness;
+    float rcp_l = 1.0 / (4.0 * lobe + 1.0);
+    vec3 result = (lobe * (b.rgb + d.rgb + f.rgb + h.rgb) + e.rgb) * rcp_l;
+    return vec4(clamp(result, 0.0, 1.0), e.a);
+}
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (p.x >= int(pc.output_width) || p.y >= int(pc.output_height)) return;
+    vec4 result;
+    if (pc.mode == 0u) {
+        result = lanczos_axis(p, 0);
+    } else if (pc.mode == 1u) {
+        result = lanczos_axis(p, 1);
+    } else if (pc.mode == 2u) {
+        result = easu(p);
+    } else {
+        result = rcas(p);
+    }
+    imageStore(output_frame, p, uvec4(pack_colour(result), 0u, 0u, 0u));
+}

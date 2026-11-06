@@ -1,0 +1,152 @@
+// SPDX-License-Identifier: MIT
+//
+// Display compose at the internal scale (TASK-027 M12, chapters 06 and 13.3, IN-372). Copyright (c) 2026 GT4Recomp
+// contributors. Written from docs/hw-renderer-spec chapters 06.8, 13.2 and 13.3, clean room (decision 0070).
+//
+// The progressive presentation compose of hw_display_compose.comp at s x s output pixels per native pixel. A
+// circuit whose buffer is a resident target with a scaled image (parameter word 12 of the circuit = slot + 1) is
+// read from that image at sub-pixel resolution, and so is one held in a display shadow (IN-377: word 12 =
+// kGpuColourSlots + shadow + 1); any other circuit is read from the GLM at 1x (each native texel covers s x s
+// output pixels). Background, merge order and merge alpha are those of the 1x kernel, so at s = 1 the
+// two kernels give the same image.
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_glm_common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+const uint kScaledColourSlots = 16u;  // gpu::kGpuColourSlots (IN-400)
+const uint kDisplayShadows = 2u;     // gpu::kGpuDisplayShadows (IN-377)
+const uint kScaledSources = kScaledColourSlots + kDisplayShadows;
+
+layout(std430, set = 0, binding = 2) readonly buffer ComposeRing {
+    uint compose_words[];
+};
+layout(set = 0, binding = 4, r32ui) uniform writeonly uimage2D hw_display;
+layout(set = 0, binding = 6, r32ui) uniform readonly uimage2D scaled_frames[kScaledSources];
+// IN-377: the 1x words of each display shadow, saved with its scaled image.
+layout(set = 0, binding = 7, r32ui) uniform readonly uimage2D shadow_words[kDisplayShadows];
+
+layout(push_constant) uniform ComposeParameters {
+    uint base;
+    uint out_width;   // scaled output pixels
+    uint out_height;
+    uint scale;
+} pc;
+
+// Parameter block: as hw_display_compose.comp, with 13 words per circuit (RC1 at 5, RC2 at 18): bp, bw, psm,
+// format, dbx, dby, read width, read height, x0, y0, w, h (native output pixels), scaled slot + 1 (0: GLM).
+uint param(uint index) {
+    return compose_words[pc.base + index];
+}
+
+uvec4 word_colour(uint stored, uint format) {
+    uint word = stored;
+    if (format == 1u) {
+        word = stored & 0x00FFFFFFu;
+    } else if (format == 2u) {
+        uint r = stored & 0x1Fu;
+        uint g = (stored >> 5) & 0x1Fu;
+        uint b = (stored >> 10) & 0x1Fu;
+        uint a = (stored >> 15) & 1u;
+        word = (r << 3) | (g << 11) | (b << 19) | (a << 31);
+    }
+    uvec4 colour = uvec4(word & 0xFFu, (word >> 8) & 0xFFu, (word >> 16) & 0xFFu, (word >> 24) & 0xFFu);
+    if (format == 1u) {
+        colour.a = 0x80u;
+    }
+    return colour;
+}
+
+// Whether scaled output pixel (x, y) lies in the circuit's placement; then the nearest source texel or sub-pixel.
+bool sample_circuit(uint c, int x, int y, out uvec4 texel) {
+    int s = int(pc.scale);
+    int x0 = int(param(c + 8u)) * s;
+    int y0 = int(param(c + 9u)) * s;
+    int w = int(param(c + 10u));
+    int h = int(param(c + 11u));
+    uint srcw = param(c + 6u);
+    uint srch = param(c + 7u);
+    texel = uvec4(0u);
+    if (w <= 0 || h <= 0 || srcw == 0u || srch == 0u) {
+        return false;
+    }
+    if (x < max(0, x0) || x >= min(int(pc.out_width), x0 + w * s) || y < max(0, y0) ||
+        y >= min(int(pc.out_height), y0 + h * s)) {
+        return false;
+    }
+    uint slot = param(c + 12u);
+    uint format = param(c + 3u);
+    // The native source pixel of this output pixel (the one the 1x compose shows here).
+    uint nx = uint(x - x0) / pc.scale;
+    uint ny = uint(y - y0) / pc.scale;
+    uint sx1 = min(nx * srcw / uint(w), srcw - 1u);
+    uint sy1 = min(ny * srch / uint(h), srch - 1u);
+    uint gx = uint(int(param(c + 4u)) + int(sx1)) & 2047u;
+    uint gy = uint(int(param(c + 5u)) + int(sy1)) & 2047u;
+    // A resident slot's scaled image is current by construction; only a shadow or the GLM path read the GLM.
+    bool resident = slot != 0u && slot <= kScaledColourSlots;
+    uvec4 native_texel = uvec4(0u);
+    if (!resident) {
+        native_texel = word_colour(glm_read(param(c + 0u), param(c + 1u), param(c + 2u), gx, gy), format);
+    }
+    // Sub-pixel source: the read rectangle at scale, stretched over the placement like the 1x kernel does.
+    // 06.3 native mode puts GS coordinate N on the centre of sub-pixel block N, so a primitive that starts on the
+    // buffer's first row or column (P = 0) leaves the first floor(s/2) sub-pixel rows and columns undrawn (the
+    // "top row and left column" of 06.3). The read rectangle's first drawn sub-pixel stands in for them, so the
+    // picture never shows a stale line at its top or left edge (06.9: no black row/column at screen edges).
+    uint undrawn = pc.scale / 2u;
+    uint sx = max(min(uint(x - x0) * srcw / uint(w), srcw * pc.scale - 1u), undrawn);
+    uint sy = max(min(uint(y - y0) * srch / uint(h), srch * pc.scale - 1u), undrawn);
+    uint px = param(c + 4u) * pc.scale + sx;
+    uint py = param(c + 5u) * pc.scale + sy;
+    if (slot > kScaledColourSlots && slot <= kScaledSources) {
+        // IN-377 display shadow: valid for this sub-pixel only while memory still holds the words saved with it, both at
+        // the native pixel the 1x compose shows here and at the native pixel the sub-pixel was drawn for (06.3).
+        uint shadow = slot - kScaledColourSlots - 1u;
+        uint dx = (px - undrawn) / pc.scale;
+        uint dy = (py - undrawn) / pc.scale;
+        uvec4 saved = word_colour(imageLoad(shadow_words[shadow], ivec2(gx, gy)).x, format);
+        uvec4 drawn_saved = word_colour(imageLoad(shadow_words[shadow], ivec2(dx, dy)).x, format);
+        uvec4 drawn_now = word_colour(glm_read(param(c + 0u), param(c + 1u), param(c + 2u), dx & 2047u, dy & 2047u),
+                                      format);
+        if (saved != native_texel || drawn_saved != drawn_now) {
+            slot = 0u;
+        }
+    }
+    if (slot != 0u && slot <= kScaledSources) {
+        texel = word_colour(imageLoad(scaled_frames[slot - 1u], ivec2(px, py)).x, format);
+        return true;
+    }
+    texel = native_texel;
+    return true;
+}
+
+uint blend_channel(uint src, uint dst, uint a) {
+    return (src * a + dst * (255u - a) + 127u) / 255u;
+}
+
+void main() {
+    uvec2 pixel = gl_GlobalInvocationID.xy;
+    if (pixel.x >= pc.out_width || pixel.y >= pc.out_height) {
+        return;
+    }
+    uint bg = param(0u);
+    uvec4 out_colour = uvec4(bg & 0xFFu, (bg >> 8) & 0xFFu, (bg >> 16) & 0xFFu, (bg >> 24) & 0xFFu);
+    int x = int(pixel.x);
+    int y = int(pixel.y);
+    uvec4 texel;
+    if (param(4u) != 0u && sample_circuit(18u, x, y, texel)) {
+        out_colour = texel;
+    }
+    if (param(3u) != 0u && sample_circuit(5u, x, y, texel)) {
+        uint a = param(2u) != 0u ? param(1u) : min(255u, texel.a * 2u);
+        out_colour.r = blend_channel(texel.r, out_colour.r, a);
+        out_colour.g = blend_channel(texel.g, out_colour.g, a);
+        out_colour.b = blend_channel(texel.b, out_colour.b, a);
+        out_colour.a = texel.a;
+    }
+    imageStore(hw_display, ivec2(pixel),
+               uvec4(out_colour.r | (out_colour.g << 8) | (out_colour.b << 16) | (out_colour.a << 24), 0u, 0u, 0u));
+}

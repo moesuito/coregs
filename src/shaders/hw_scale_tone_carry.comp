@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: MIT
+//
+// Scaled tone-curve carry (TASK-027 M12, chapter 09.4 policy 2, IN-379). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec chapters 06.8 and 09.3/09.4, clean room (decision 0070).
+//
+// GT4 runs every race frame through an RGB tone curve: it reads its 32-bit frame buffer through 8-bit views and a
+// ramp CLUT page by page and writes the result back (09.4 variant A). Those reinterpretation draws go through the GLM
+// at 1x, so the frame's scaled image ends up as the 1x result blown up (owner test 7). The 1x words stay exact; this
+// kernel only rebuilds the scaled image afterwards. Its net effect per channel is a table: R' = T_r[R], G' = T_g[G],
+// B' = T_b[B]. The table is learned from the frame's 1x words before the sequence (P, saved with the scaled image S)
+// and after it (Q), then applied to every sub-pixel of S. A sub-pixel keeps the carried value only where the table
+// explains Q at both native pixels it depends on (the nearest one and the one it was drawn for, 06.3); anywhere else
+// it shows Q at 1x, as a plain refresh would. So the presentation never shows anything the 1x words contradict.
+//
+// Modes (push constant `mode`), dispatched in order with barriers between them:
+//   0 clear the table; 1 learn it over the native rectangle; 2 fill unseen entries (interpolation between seen
+//   neighbours, one invocation); 3 write the scaled rectangle.
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0, r32ui) uniform readonly uimage2D before_words;   // P: the 1x words before the sequence
+layout(set = 0, binding = 1, r32ui) uniform readonly uimage2D before_scaled;  // S: the scaled image before it
+layout(set = 0, binding = 2, r32ui) uniform readonly uimage2D after_words;    // Q: the slot's 1x words now
+layout(set = 0, binding = 3, r32ui) uniform writeonly uimage2D after_scaled;  // the slot's scaled image (written)
+layout(std430, set = 0, binding = 4) buffer ToneTable {
+    uint table[768];  // channel * 256 + value: the value after the sequence + 1, or 0 when not seen
+};
+
+layout(push_constant) uniform ToneParameters {
+    uint mode;
+    uint x0;      // native rectangle, inclusive origin
+    uint y0;
+    uint width;   // native pixels
+    uint height;
+    uint scale;   // s
+} pc;
+
+uint channel(uint word, uint c) {
+    return (word >> (8u * c)) & 0xFFu;
+}
+
+// The table explains native pixel n: every colour channel of P maps to the same channel of Q.
+bool explained(ivec2 n) {
+    uint p = imageLoad(before_words, n).x;
+    uint q = imageLoad(after_words, n).x;
+    for (uint c = 0u; c < 3u; ++c) {
+        if (table[c * 256u + channel(p, c)] != channel(q, c) + 1u) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void main() {
+    uvec2 gid = gl_GlobalInvocationID.xy;
+    if (pc.mode == 0u) {
+        uint index = gid.y * 64u + gid.x;
+        if (gid.x < 64u && index < 768u) {
+            table[index] = 0u;
+        }
+        return;
+    }
+    if (pc.mode == 1u) {
+        if (gid.x >= pc.width || gid.y >= pc.height) {
+            return;
+        }
+        ivec2 n = ivec2(pc.x0 + gid.x, pc.y0 + gid.y);
+        uint p = imageLoad(before_words, n).x;
+        uint q = imageLoad(after_words, n).x;
+        for (uint c = 0u; c < 3u; ++c) {
+            table[c * 256u + channel(p, c)] = channel(q, c) + 1u;  // a conflicting pixel fails `explained` later
+        }
+        return;
+    }
+    if (pc.mode == 2u) {
+        if (gid.x != 0u || gid.y != 0u) {
+            return;
+        }
+        for (uint c = 0u; c < 3u; ++c) {
+            int previous = -1;
+            for (int v = 0; v < 256; ++v) {
+                if (table[c * 256u + uint(v)] == 0u) {
+                    continue;
+                }
+                uint here = table[c * 256u + uint(v)];
+                if (previous < 0) {
+                    for (int u = 0; u < v; ++u) table[c * 256u + uint(u)] = here;  // below the first seen value
+                } else {
+                    uint low = table[c * 256u + uint(previous)];
+                    for (int u = previous + 1; u < v; ++u) {
+                        // linear between the seen neighbours (values + 1 stay >= 1)
+                        int span = v - previous;
+                        int value = int(low) + ((int(here) - int(low)) * (u - previous) + span / 2) / span;
+                        table[c * 256u + uint(u)] = uint(value);
+                    }
+                }
+                previous = v;
+            }
+            if (previous < 0) {
+                for (uint u = 0u; u < 256u; ++u) table[c * 256u + u] = u + 1u;  // channel never seen: identity
+            } else {
+                uint last = table[c * 256u + uint(previous)];
+                for (int u = previous + 1; u < 256; ++u) table[c * 256u + uint(u)] = last;
+            }
+        }
+        return;
+    }
+    // mode 3: the scaled rectangle.
+    if (gid.x >= pc.width * pc.scale || gid.y >= pc.height * pc.scale) {
+        return;
+    }
+    uint half_s = pc.scale / 2u;
+    ivec2 sub = ivec2(uvec2(pc.x0, pc.y0) * pc.scale + gid);
+    ivec2 nearest = ivec2(uvec2(pc.x0, pc.y0) + gid / pc.scale);
+    // 06.3: the native pixel this sub-pixel was drawn for (clamped to the rectangle).
+    uvec2 shifted = uvec2(max(int(gid.x) - int(half_s), 0), max(int(gid.y) - int(half_s), 0)) / pc.scale;
+    ivec2 drawn = ivec2(uvec2(pc.x0, pc.y0) + shifted);
+    uint q = imageLoad(after_words, nearest).x;
+    uint word = q;
+    if (explained(nearest) && explained(drawn)) {
+        uint s = imageLoad(before_scaled, sub).x;
+        word = q & 0xFF000000u;
+        for (uint c = 0u; c < 3u; ++c) {
+            word |= (table[c * 256u + channel(s, c)] - 1u) << (8u * c);
+        }
+    }
+    imageStore(after_scaled, sub, uvec4(word, 0u, 0u, 0u));
+}

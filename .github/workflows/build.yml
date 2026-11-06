@@ -1,0 +1,70 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vulkan SDK
+        run: choco install vulkan-sdk -y --no-progress
+
+      - name: Toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Shader compiler
+        shell: pwsh
+        run: |
+          $compiler = Join-Path $env:VULKAN_SDK 'Bin\glslangValidator.exe'
+          & $compiler --version
+          Get-FileHash $compiler -Algorithm SHA256 | Format-List
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER=clang-cl
+          -DCOREGS_GLSLANG_PIN=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure -j 4
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libvulkan-dev glslang-tools mesa-vulkan-drivers
+
+      - name: Shader compiler
+        run: |
+          glslangValidator --version
+          sha256sum "$(command -v glslangValidator)"
+
+      - name: Configure
+        # The distro glslang is not the pinned Windows build; the job records its version and
+        # hash in the log and builds the shaders with it deliberately.
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCOREGS_GLSLANG_PIN=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        env:
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+        run: ctest --test-dir build --output-on-failure -j 4

@@ -1,0 +1,37 @@
+CoreGS
+======
+
+CoreGS is a hardware-faithful PlayStation 2 Graphics Synthesizer renderer for Vulkan,
+released under the MIT licence (see LICENSE).
+
+Origin
+------
+
+CoreGS was extracted from GT4Recomp (https://github.com/moesuito/gt4-staticrecomp), an MIT
+static recompilation of Gran Turismo 4, at commit ebfe1ca5 (branch release/1.3.0-rc15,
+2026-11-06). The renderer there is called CoreGS 2.0 and was written from GT4Recomp's own
+clean-room specification of the PS2 GS hardware. This repository keeps that code, removes
+the Gran Turismo 4 content rules from the generic core (they now live in profiles/gt4 as an
+example) and publishes the renderer on its own.
+
+No game data, no disc image, no BIOS, no save, no capture and no game executable is part of
+this repository.
+
+Clean room
+----------
+
+CoreGS is a clean-room implementation: it was written from the PS2 hardware documentation and
+from observing the GS register and packet interfaces, not from the source of another emulator
+or renderer. No GPL code and no code or text derived from another emulator is included. See
+CONTRIBUTING.md for the rule contributors must follow.
+
+Third-party components
+----------------------
+
+- src/replace/third_party/stb_image.h: stb_image by Sean Barrett and contributors, MIT licence
+  (or public domain, at your option). Used to load texture-replacement PNGs.
+- src/replace/third_party/xxhash.h: xxHash by Yann Collet, BSD 2-Clause licence. Used for the
+  texture-replacement pack checksums.
+
+Both files keep their own copyright headers. They are the only third-party code in the
+repository; everything else is MIT, Copyright (c) 2026 João Alano and GT4Recomp contributors.

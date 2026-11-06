@@ -1,0 +1,4 @@
+# Normalise line endings: LF in the repository, whatever the platform writes on checkout.
+* text=auto eol=lf
+*.png binary
+*.ico binary

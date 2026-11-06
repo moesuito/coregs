@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: MIT
+//
+// HWR exactness entry point: full pixel path over case records (TASK-027, M4).
+// Copyright (c) 2026 GT4Recomp contributors.
+//
+// Written from docs/hw-renderer-spec (chapters 01.5, 03.4, 08), clean room (decision 0069).
+// Each record carries its own pipeline state, fragment and destination, and receives the
+// outcome in place. The record layout is mirrored by GpuPixelCase in
+// hw_pixel_gpu_fixture.cpp (50 uint32 words, in this order).
+
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "hw_pixel_core.glsl"
+
+layout(local_size_x = 64) in;
+
+struct HwCase {
+    uint format;
+    uint fbmsk;
+    uint fba;
+    uint dither;
+    uint dimx_lo;
+    uint dimx_hi;
+    uint ate;
+    uint atst;
+    uint afail;
+    uint aref;
+    uint date_on;
+    uint datm;
+    uint ztest;
+    uint ztst;
+    uint zmsk;
+    uint zformat;
+    uint blend_on;
+    uint pabe;
+    uint blend_a;
+    uint blend_b;
+    uint blend_c;
+    uint blend_d;
+    uint fix;
+    uint colclamp;
+    uint tex_on;
+    uint tfx;
+    uint tcc;
+    uint texel_kind;
+    uint texel_raw;
+    uint ta0;
+    uint ta1;
+    uint aem;
+    uint fog_on;
+    uint fog;
+    uint fog_r;
+    uint fog_g;
+    uint fog_b;
+    uint x;
+    uint y;
+    uint fr;
+    uint fg;
+    uint fb;
+    uint fa;
+    uint fz;
+    uint frame_old;
+    uint depth_old;
+    uint frame_written;
+    uint frame_stored;
+    uint depth_written;
+    uint depth_stored;
+};
+
+layout(std430, set = 0, binding = 0) buffer CaseRecords {
+    HwCase records[];
+};
+
+layout(push_constant) uniform CasePush {
+    uint count;
+} pc;
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    if (index >= pc.count) {
+        return;
+    }
+    HwCase c = records[index];
+
+    HwPixelState s;
+    s.format = c.format;
+    s.fbmsk = c.fbmsk;
+    s.fba = c.fba;
+    s.dither = c.dither;
+    s.dimx_lo = c.dimx_lo;
+    s.dimx_hi = c.dimx_hi;
+    s.ate = c.ate;
+    s.atst = c.atst;
+    s.afail = c.afail;
+    s.aref = c.aref;
+    s.date_on = c.date_on;
+    s.datm = c.datm;
+    s.ztest = c.ztest;
+    s.ztst = c.ztst;
+    s.zmsk = c.zmsk;
+    s.zformat = c.zformat;
+    s.blend_on = c.blend_on;
+    s.pabe = c.pabe;
+    s.blend_a = c.blend_a;
+    s.blend_b = c.blend_b;
+    s.blend_c = c.blend_c;
+    s.blend_d = c.blend_d;
+    s.fix = c.fix;
+    s.colclamp = c.colclamp;
+
+    ivec4 frag = ivec4(int(c.fr), int(c.fg), int(c.fb), int(c.fa));
+    ivec4 shaded = hw_shade_fragment(c.tex_on != 0u, c.tfx, c.tcc != 0u, c.texel_kind, c.texel_raw,
+                                     c.ta0, c.ta1, c.aem != 0u, c.fog_on != 0u, int(c.fog),
+                                     ivec3(int(c.fog_r), int(c.fog_g), int(c.fog_b)), frag);
+
+    HwFragment f;
+    f.x = c.x;
+    f.y = c.y;
+    f.colour = shaded;
+    f.z = c.fz;
+
+    HwOutcome o = hw_process_pixel(s, f, c.frame_old, c.depth_old);
+    records[index].frame_written = o.frame_written ? 1u : 0u;
+    records[index].frame_stored = o.frame_stored;
+    records[index].depth_written = o.depth_written ? 1u : 0u;
+    records[index].depth_stored = o.depth_stored;
+}

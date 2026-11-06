@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: MIT
+//
+// CORE2 patch (TASK-027 core rewrite, CORE2-SPEC 4.1 and 2.4b). Copyright (c) 2026 GT4Recomp contributors.
+// Written from docs/hw-renderer-spec/CORE2-SPEC.md, clean room (decision 0070).
+//
+// Writes a native rectangle of stored GS words (read from GS memory on the CPU, in the target's format) into a
+// target image at the internal scale: every output pixel of native pixel N's s x s block takes N's word (nearest,
+// 8.2 ownership). Only the bits in `mask` are written, so a 24-bit upload into a shared 32/24 target keeps the
+// stored top byte (1.3). With a `mask` of 0 each word comes with its own mask after it (IN-512).
+
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer PatchWords {
+    uint words[];
+};
+layout(set = 0, binding = 1, r32ui) uniform uimage2D target;
+
+layout(push_constant) uniform PatchParameters {
+    uint first_word;  // offset of the rectangle's first word in `words`
+    uint x0;          // native rectangle
+    uint y0;
+    uint width;
+    uint height;
+    uint scale;
+    uint mask;        // bits of the stored word that are written; 0: per word
+} pc;
+
+void main() {
+    uvec2 local = gl_GlobalInvocationID.xy;  // output pixel inside the scaled rectangle
+    if (local.x >= pc.width * pc.scale || local.y >= pc.height * pc.scale) {
+        return;
+    }
+    uvec2 native = local / pc.scale;
+    uint stride = pc.mask == 0u ? 2u : 1u;
+    uint index = pc.first_word + (native.y * pc.width + native.x) * stride;
+    uint word = words[index];
+    uint mask = pc.mask == 0u ? words[index + 1u] : pc.mask;
+    ivec2 pixel = ivec2(pc.x0 * pc.scale + local.x, pc.y0 * pc.scale + local.y);
+    if (pixel.x >= imageSize(target).x || pixel.y >= imageSize(target).y) {
+        return;
+    }
+    uint stored = mask == 0xFFFFFFFFu ? word : (imageLoad(target, pixel).x & ~mask) | (word & mask);
+    imageStore(target, pixel, uvec4(stored, 0u, 0u, 0u));
+}
